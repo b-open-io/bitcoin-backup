@@ -1,9 +1,9 @@
 # `bitcoin-backup`
 
 [![npm version](https://badge.fury.io/js/bitcoin-backup.svg)](https://badge.fury.io/js/bitcoin-backup)
-[![Build Status](https://img.shields.io/your_ci_provider/your_username/bitcoin-backup.svg)](https://your_ci_provider_link)
+// [![Build Status](https://img.shields.io/your_ci_provider/your_username/bitcoin-backup.svg)](https://your_ci_provider_link) // Placeholder, CI not yet configured
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-*(Note: Replace badges with actual links/services)*
+*(Note: Replace npm version badge with actual link if/when published)*
 
 A robust TypeScript library and CLI tool for managing and securing sensitive data backups, such as private keys, mnemonics, or any structured data.
 
