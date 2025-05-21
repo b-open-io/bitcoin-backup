@@ -1,7 +1,7 @@
 # `bitcoin-backup`
 
 [![npm version](https://badge.fury.io/js/bitcoin-backup.svg)](https://badge.fury.io/js/bitcoin-backup)
-[![Build Status](https://github.com/satchmo/bitcoin-backup/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/satchmo/bitcoin-backup/actions/workflows/build.yml)
+[![Build Status](https://github.com/b-open-io/bitcoin-backup/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/b-open-io/bitcoin-backup/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 *(Note: The npm version badge will be active if/when the package is published to npm.)*
 
