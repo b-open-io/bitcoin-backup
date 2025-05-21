@@ -1,18 +1,22 @@
 {
   "name": "bitcoin-backup",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "description": "",
+  "description": "A TypeScript library and CLI tool for managing and securing Bitcoin-related backup files.",
   "exports": {
     "types": "./dist/index.d.ts",
     "import": "./dist/index.js",
     "require": "./dist/index.cjs"
   },
+  "bin": {
+    "bbackup": "./dist/cli/bbackup.js"
+  },
   "scripts": {
     "build": "bun run build.ts",
+    "test": "bun test",
     "prepublishOnly": "bun run build"
   },
   "files": [
@@ -22,15 +26,23 @@
     "bun"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/wobsoriano/pkg-name#readme",
+  "homepage": "https://github.com/rohenaz/bitcoin-backup",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wobsoriano/pkg-name.git"
+    "url": "git+https://github.com/rohenaz/bitcoin-backup.git"
   },
-  "bugs": "https://github.com/wobsoriano/pkg-name/issues",
-  "author": "Robert Soriano <sorianorobertc@gmail.com>",
+  "bugs": "https://github.com/rohenaz/bitcoin-backup/issues",
+  "author": "Satchmo",
   "devDependencies": {
-    "bun-plugin-dts": "^0.3.0",
-    "@types/bun": "^1.1.10"
+    "@bsv/sdk": "^1.5.2",
+    "@types/bun": "^1.2.13",
+    "@types/commander": "^2.12.5",
+    "bun-plugin-dts": "^0.3.0"
+  },
+  "dependencies": {
+    "commander": "^14.0.0"
+  },
+  "peerDependencies": {
+    "@bsv/sdk": "^1.5.2"
   }
 }
