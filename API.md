@@ -30,16 +30,28 @@ The following interfaces define the structure of the data that can be encrypted 
 
 ### `BapMasterBackup`
 
-Represents a backup for a BAP (Bitcoin Attestation Protocol) master identity, typically including an xprv and mnemonic.
+Represents a backup for a BAP (Bitcoin Attestation Protocol) master identity. Supports both legacy BIP32 format and modern Type 42 format.
 
 ```typescript
-export interface BapMasterBackup {
-  ids: string;          // Serialized data from bsv-bap's bap.exportIds()
+// Legacy BIP32 format
+export interface BapMasterBackupLegacy {
+  ids: string;          // Encrypted data from bsv-bap's bap.exportIds()
   xprv: string;         // Master extended private key
   mnemonic: string;     // BIP39 mnemonic phrase
   label?: string;       // User-defined label (optional)
   createdAt?: string;   // ISO 8601 timestamp (populated by encryptBackup if not provided)
 }
+
+// Type 42 format (recommended for new implementations)
+export interface MasterBackupType42 {
+  ids: string;          // Encrypted data from bsv-bap's bap.exportIds()
+  rootPk: string;       // Master private key in WIF format (Type 42)
+  label?: string;       // User-defined label (optional)
+  createdAt?: string;   // ISO 8601 timestamp (populated by encryptBackup if not provided)
+}
+
+// Main type that supports both formats
+export type BapMasterBackup = BapMasterBackupLegacy | MasterBackupType42;
 ```
 
 ### `BapMemberBackup`

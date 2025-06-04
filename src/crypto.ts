@@ -140,9 +140,10 @@ export async function decryptData(
         const parsedJson = JSON.parse(decryptedString);
         if (typeof parsedJson === 'object' && parsedJson !== null) {
           if ('xprv' in parsedJson && 'ids' in parsedJson && 'mnemonic' in parsedJson) return parsedJson as BapMasterBackup;
+          if ('rootPk' in parsedJson && 'ids' in parsedJson) return parsedJson as BapMasterBackup;
           if ('wif' in parsedJson && 'id' in parsedJson) return parsedJson as BapMemberBackup;
           if ('ordPk' in parsedJson && 'payPk' in parsedJson && 'identityPk' in parsedJson) return parsedJson as OneSatBackup;
-          if ('wif' in parsedJson && !('id' in parsedJson) && !('xprv' in parsedJson)) return parsedJson as WifBackup;
+          if ('wif' in parsedJson && !('id' in parsedJson) && !('xprv' in parsedJson) && !('rootPk' in parsedJson)) return parsedJson as WifBackup;
         }
         throw new Error('Invalid backup structure after JSON parse.');
       } catch (jsonError) {

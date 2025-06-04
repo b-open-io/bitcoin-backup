@@ -18,11 +18,20 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
   // Narrow down type for property checks
   const p = payload as Record<string, unknown>;
 
-  // Check for BapMasterBackup structure
+  // Check for BapMasterBackup structure (legacy XPRV format)
   if (
     'xprv' in p && typeof p.xprv === 'string' &&
     'ids' in p && typeof p.ids === 'string' &&
     'mnemonic' in p && typeof p.mnemonic === 'string'
+  ) {
+    return true;
+  }
+
+  // Check for BapMasterBackup structure (Type 42 format)
+  if (
+    'rootPk' in p && typeof p.rootPk === 'string' &&
+    'ids' in p && typeof p.ids === 'string' &&
+    !('xprv' in p) // Ensure it's not a legacy format
   ) {
     return true;
   }
@@ -39,7 +48,8 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
   if (
     'wif' in p && typeof p.wif === 'string' &&
     !('id' in p) && // Differentiates from BapMemberBackup
-    !('xprv' in p) // Differentiates from BapMasterBackup (though wif and xprv are unlikely together)
+    !('xprv' in p) && // Differentiates from BapMasterBackupLegacy
+    !('rootPk' in p) // Differentiates from MasterBackupType42
   ) {
     return true;
   }

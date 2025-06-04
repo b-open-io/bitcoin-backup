@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'bun:test';
 import {
   encryptBackup,
   decryptBackup,
-  // Import a payload type for testing invalid scenarios
+  // Import the main interface that users will use
   type BapMasterBackup,
   type OneSatBackup // Added OneSatBackup for testing
 } from '../src/index'; // Test the public API
@@ -14,6 +14,10 @@ describe('Public API Functions (index.ts)', () => {
     xprv: 'masterXprv',
     mnemonic: 'master mnemonic phrase words a dozen or so here please and thank you'
   };
+  const type42Payload: BapMasterBackup = {
+    ids: 'type42Ids',
+    rootPk: 'L5EZftvrYaSudiozVRzTqLcHLNDoVn7H5HSfM9BAN6tMJX8oTWz6'
+  };
   const oneSatPayload: OneSatBackup = {
     ordPk: 'KyMZUNynwhjevQQ4eQURisggnmkoQvcWNrWG8MPwztQALEzDEtCu',
     payPk: 'L156TApxcSCDGQgXRNahKiivZ57ZavGHREy1df4p6PuaRvXE3a1D',
@@ -23,11 +27,13 @@ describe('Public API Functions (index.ts)', () => {
   // A payload that is an object but doesn't match any known structure
   const invalidStructurePayload = { some: 'data', not: 'aBackup' };
   let encryptedMasterString: string;
+  let encryptedType42String: string;
   let encryptedOneSatString: string;
 
   // Use beforeAll to ensure validEncryptedString is set before tests that need it
   beforeAll(async () => {
     encryptedMasterString = await encryptBackup(masterPayload, validPassphrase);
+    encryptedType42String = await encryptBackup(type42Payload, validPassphrase);
     encryptedOneSatString = await encryptBackup(oneSatPayload, validPassphrase);
   });
 
@@ -61,6 +67,10 @@ describe('Public API Functions (index.ts)', () => {
 
     it('should accept a valid OneSatBackup payload', async () => {
       await expect(encryptBackup(oneSatPayload, validPassphrase)).resolves.toBeString();
+    });
+
+    it('should accept a valid BapMasterBackup payload', async () => {
+      await expect(encryptBackup(type42Payload, validPassphrase)).resolves.toBeString();
     });
 
     it('should throw if passphrase is not a string', async () => {
@@ -125,10 +135,20 @@ describe('Public API Functions (index.ts)', () => {
 
     // Core decryption logic (correct passphrase, corrupted data, etc.) is tested in crypto.test.ts
     // This suite focuses on the input validation of the public API wrapper.
-    it('should call decryptData for valid inputs (smoke test for BapMasterBackup)', async () => {
+    it('should call decryptData for valid inputs (smoke test for BapMasterBackup legacy)', async () => {
       const decrypted = await decryptBackup(encryptedMasterString, validPassphrase);
       expect(decrypted).toBeDefined();
       expect((decrypted as BapMasterBackup).ids).toBe(masterPayload.ids);
+    });
+
+    it('should call decryptData for valid inputs (smoke test for Type 42)', async () => {
+      const decrypted = await decryptBackup(encryptedType42String, validPassphrase);
+      expect(decrypted).toBeDefined();
+      expect((decrypted as BapMasterBackup).ids).toBe(type42Payload.ids);
+      // Type guard for Type 42 format
+      if ('rootPk' in decrypted) {
+        expect(decrypted.rootPk).toBe(type42Payload.rootPk as string);
+      }
     });
 
     it('should call decryptData for valid inputs (smoke test for OneSatBackup)', async () => {

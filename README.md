@@ -175,3 +175,127 @@ Contributions are welcome! Please open an issue or submit a pull request. (A mor
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+## Backup Format Types
+
+### Master Backup
+The `BapMasterBackup` interface supports both modern Type 42 key derivation and legacy BIP32 formats:
+
+**Type 42 Format (Recommended):**
+```typescript
+interface BapMasterBackup {
+  ids: string;          // Encrypted BAP identity data
+  rootPk: string;    // Master private key in WIF format
+  label?: string;       // Optional user label
+  createdAt?: string;   // ISO 8601 timestamp
+}
+```
+
+**Legacy Format (BIP32):**
+```typescript
+interface BapMasterBackup {
+  ids: string;          // Encrypted BAP identity data
+  xprv: string;         // Master extended private key
+  mnemonic: string;     // BIP39 mnemonic phrase
+  label?: string;       // Optional user label
+  createdAt?: string;   // ISO 8601 timestamp
+}
+```
+
+### Other Supported Formats
+- **BapMemberBackup**: Individual member key backups
+- **WifBackup**: Simple WIF key backups
+- **OneSatBackup**: 1Sat ordinals wallet backups
+
+## Usage
+
+### Basic Usage
+
+```typescript
+import { encryptBackup, decryptBackup, type BapMasterBackup } from 'bitcoin-backup';
+
+// Type 42 backup (recommended)
+const type42Backup: BapMasterBackup = {
+  ids: 'encrypted-bap-data',
+  rootPk: 'L5EZftvrYaSudiozVRzTqLcHLNDoVn7H5HSfM9BAN6tMJX8oTWz6',
+  label: 'My Main Wallet'
+};
+
+// Legacy backup (still supported)
+const legacyBackup: BapMasterBackup = {
+  ids: 'encrypted-bap-data',
+  xprv: 'xprv9s21ZrQH143K...',
+  mnemonic: 'abandon abandon abandon...'
+};
+
+// Encrypt any backup format
+const encrypted = await encryptBackup(type42Backup, 'your-secure-passphrase');
+
+// Decrypt automatically detects format
+const decrypted = await decryptBackup(encrypted, 'your-secure-passphrase');
+```
+
+### Type 42 Key Derivation
+Type 42 provides enhanced privacy through deterministic key derivation between parties:
+
+```typescript
+import { PrivateKey } from '@bsv/sdk';
+
+// Example: Alice and Bob derive shared keys using Type 42
+const alice = PrivateKey.fromWif('L5EZftvrYaSudiozVRzTqLcHLNDoVn7H5HSfM9BAN6tMJX8oTWz6');
+const bobPub = PrivateKey.fromRandom().toPublicKey();
+
+// Alice derives a child key for a specific purpose/invoice
+const invoiceNumber = 'payment-2024-001';
+const derivedKey = alice.deriveChild(bobPub, invoiceNumber);
+```
+
+## Advantages of Type 42 vs Legacy
+
+| Feature | Type 42 | Legacy (BIP32) |
+|---------|---------|----------------|
+| **Privacy** | High - Private key derivation | Limited - Public derivation possible |
+| **Key Space** | Unlimited invoice numbers | Limited to 2^31 child keys |
+| **Flexibility** | Custom invoice numbering | Sequential integer paths only |
+| **Shared Derivation** | Yes - Secure shared key universes | No |
+| **Format Detection** | Automatic via `rootPk` field | Automatic via `xprv` field |
+
+## CLI Usage
+
+```bash
+# Encrypt a backup file
+bbackup encrypt input.json -p "passphrase" -o encrypted.backup
+
+# Decrypt a backup file  
+bbackup decrypt encrypted.backup -p "passphrase" -o decrypted.json
+```
+
+## Security Features
+
+- **AES-GCM Encryption**: 256-bit keys with authenticated encryption
+- **PBKDF2 Key Derivation**: 600,000 iterations (configurable)
+- **Secure Random**: Cryptographically secure salt and IV generation
+- **Legacy Support**: Automatic detection and handling of older formats
+
+## API Reference
+
+### Functions
+
+- `encryptBackup(payload, passphrase, iterations?)`: Encrypt any supported backup format
+- `decryptBackup(encrypted, passphrase, iterations?)`: Decrypt and auto-detect format
+
+### Types
+
+- `BapMasterBackup`: Type 42 master backup format
+- `BapMemberBackup`: Member key backup format
+- `WifBackup`: Simple WIF backup format
+- `OneSatBackup`: 1Sat ordinals backup format
+
+## Migration Guide
+
+To migrate from legacy to Type 42 format:
+
+1. **Extract your master key**: Convert XPRV to WIF format using BSV SDK
+2. **Choose a key name**: Select a meaningful identifier for your master key
+3. **Create new backup**: Use `BapMasterBackup` interface
+4. **Test thoroughly**: Verify encryption/decryption works as expected

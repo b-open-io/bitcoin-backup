@@ -1,10 +1,20 @@
-export interface BapMasterBackup {
+export interface BapMasterBackupLegacy {
   ids: string;          // Encrypted data from bsv-bap's bap.exportIds()
   xprv: string;         // Master extended private key
   mnemonic: string;     // BIP39 mnemonic phrase
   label?: string;       // User-defined label (optional)
   createdAt?: string;   // ISO 8601 timestamp (populated by encryptBackup if not provided)
 }
+
+export interface MasterBackupType42 {
+  ids: string;          // Encrypted data from bsv-bap's bap.exportIds()
+  rootPk: string;    // Master private key in WIF format (Type 42)
+  label?: string;       // User-defined label (optional)
+  createdAt?: string;   // ISO 8601 timestamp (populated by encryptBackup if not provided)
+}
+
+// Main interface that users import - supports both legacy and Type 42 formats
+export type BapMasterBackup = BapMasterBackupLegacy | MasterBackupType42;
 
 export interface BapMemberBackup {
   wif: string;          // Private key in WIF format
