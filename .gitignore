@@ -8,6 +8,9 @@ node_modules/
 # Bun lockfile (bun.lockb) is usually committed, similar to package-lock.json or yarn.lock
 # bun-debug.log* # Uncomment if Bun starts producing debug logs you want to ignore
 
+# Linting and formatting
+.biome-cache/
+
 # OS-specific
 .DS_Store
 Thumbs.db

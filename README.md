@@ -168,6 +168,15 @@ This will output a `dist/` directory containing:
 
 This project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## Development
+
+```bash
+bun lint          # Check code quality
+bun lint:fix      # Auto-fix safe issues  
+bun lint:unsafe   # Auto-fix all issues
+bun check         # Lint + test + build
+```
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request. (A more detailed `CONTRIBUTING.md` could be added).

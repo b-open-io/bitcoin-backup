@@ -1,7 +1,7 @@
 {
   "name": "bitcoin-backup",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,7 +18,8 @@
     "build": "bun run build.ts",
     "test": "bun test",
     "lint": "biome check .",
-    "lint:fix": "biome check --fix --unsafe .",
+    "lint:fix": "biome check --fix .",
+    "lint:unsafe": "biome check --fix --unsafe .",
     "format": "biome format --write .",
     "check": "bun run lint && bun run test && bun run build",
     "prepublishOnly": "bun run build"
@@ -39,8 +40,8 @@
   "author": "Satchmo",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@bsv/sdk": "^1.5.2",
-    "@types/bun": "^1.2.13",
+    "@bsv/sdk": "^1.6.0",
+    "@types/bun": "^1.2.15",
     "@types/commander": "^2.12.5",
     "bun-plugin-dts": "^0.3.0"
   },
