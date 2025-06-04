@@ -1,5 +1,12 @@
 import { Utils } from '@bsv/sdk';
-import type { DecryptedBackup, EncryptedBackup, BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup } from './interfaces';
+import type {
+  BapMasterBackup,
+  BapMemberBackup,
+  DecryptedBackup,
+  EncryptedBackup,
+  OneSatBackup,
+  WifBackup,
+} from './interfaces';
 
 const { toArray, toBase64 } = Utils;
 
@@ -44,7 +51,7 @@ async function deriveKey(
     },
     keyMaterial,
     { name: 'AES-GCM', length: AES_KEY_LENGTH_BITS },
-    false, 
+    false,
     ['encrypt', 'decrypt']
   );
 }
@@ -121,9 +128,11 @@ export async function decryptData(
   const encryptedCiphertext = combinedBytes.slice(SALT_LENGTH_BYTES + IV_LENGTH_BYTES);
 
   const iterationCountsToTry: number[] =
-    typeof attemptIterations === 'number' ? [attemptIterations] :
-    Array.isArray(attemptIterations) ? attemptIterations :
-    [RECOMMENDED_PBKDF2_ITERATIONS, LEGACY_PBKDF2_ITERATIONS]; // Updated default order
+    typeof attemptIterations === 'number'
+      ? [attemptIterations]
+      : Array.isArray(attemptIterations)
+        ? attemptIterations
+        : [RECOMMENDED_PBKDF2_ITERATIONS, LEGACY_PBKDF2_ITERATIONS]; // Updated default order
 
   let lastError: Error | null = null;
 
@@ -139,11 +148,19 @@ export async function decryptData(
       try {
         const parsedJson = JSON.parse(decryptedString);
         if (typeof parsedJson === 'object' && parsedJson !== null) {
-          if ('xprv' in parsedJson && 'ids' in parsedJson && 'mnemonic' in parsedJson) return parsedJson as BapMasterBackup;
+          if ('xprv' in parsedJson && 'ids' in parsedJson && 'mnemonic' in parsedJson)
+            return parsedJson as BapMasterBackup;
           if ('rootPk' in parsedJson && 'ids' in parsedJson) return parsedJson as BapMasterBackup;
           if ('wif' in parsedJson && 'id' in parsedJson) return parsedJson as BapMemberBackup;
-          if ('ordPk' in parsedJson && 'payPk' in parsedJson && 'identityPk' in parsedJson) return parsedJson as OneSatBackup;
-          if ('wif' in parsedJson && !('id' in parsedJson) && !('xprv' in parsedJson) && !('rootPk' in parsedJson)) return parsedJson as WifBackup;
+          if ('ordPk' in parsedJson && 'payPk' in parsedJson && 'identityPk' in parsedJson)
+            return parsedJson as OneSatBackup;
+          if (
+            'wif' in parsedJson &&
+            !('id' in parsedJson) &&
+            !('xprv' in parsedJson) &&
+            !('rootPk' in parsedJson)
+          )
+            return parsedJson as WifBackup;
         }
         throw new Error('Invalid backup structure after JSON parse.');
       } catch (jsonError) {
@@ -163,7 +180,14 @@ export async function decryptData(
   // If all iteration counts failed
   console.error('All decryption attempts failed. Last error:', lastError);
   if (lastError && lastError.name === 'OperationError') {
-    throw new Error('Decryption failed: Invalid passphrase or corrupted data across all attempted iteration counts.');
+    throw new Error(
+      'Decryption failed: Invalid passphrase or corrupted data across all attempted iteration counts.'
+    );
   }
-  throw lastError || new Error('Decryption failed: Invalid passphrase or corrupted data across all attempted iteration counts.');
-} 
+  throw (
+    lastError ||
+    new Error(
+      'Decryption failed: Invalid passphrase or corrupted data across all attempted iteration counts.'
+    )
+  );
+}

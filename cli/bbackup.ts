@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 
-import { Command } from 'commander';
-import { encryptBackup, RECOMMENDED_PBKDF2_ITERATIONS, type DecryptedBackup, decryptBackup } from '../src/index';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { Command } from 'commander';
+import {
+  type DecryptedBackup,
+  RECOMMENDED_PBKDF2_ITERATIONS,
+  decryptBackup,
+  encryptBackup,
+} from '../src/index';
 
 const program = new Command();
 
@@ -17,49 +22,70 @@ program
   .description('Encrypt a JSON backup file.')
   .requiredOption('-p, --password <password>', 'Passphrase for encryption')
   .option('-o, --output <outputFile>', 'Path to save the encrypted backup')
-  .option('-t, --iterations <count>', 'Number of PBKDF2 iterations', (val) => Number.parseInt(val, 10), RECOMMENDED_PBKDF2_ITERATIONS)
-  .action(async (inputFile: string, options: { password: string; output?: string; iterations: number }) => {
-    let outputFile = options.output;
-    if (!outputFile) {
-      const inputPath = path.parse(inputFile);
-      outputFile = path.join(inputPath.dir, `${inputPath.name}_encrypted.bep`);
-      console.log(`Output file not specified, defaulting to: ${outputFile}`);
-    }
-
-    console.log(`Encrypting ${inputFile} to ${outputFile} using ${options.iterations} iterations...`);
-
-    try {
-      const absoluteInputPath = path.resolve(inputFile);
-      const decryptedJsonString = await fs.readFile(absoluteInputPath, 'utf-8');
-      const decryptedPayload = JSON.parse(decryptedJsonString) as DecryptedBackup;
-
-      if (!decryptedPayload || typeof decryptedPayload !== 'object') {
-        throw new Error('Invalid input file content: Must be a valid JSON object representing a backup.');
+  .option(
+    '-t, --iterations <count>',
+    'Number of PBKDF2 iterations',
+    (val) => Number.parseInt(val, 10),
+    RECOMMENDED_PBKDF2_ITERATIONS
+  )
+  .action(
+    async (
+      inputFile: string,
+      options: { password: string; output?: string; iterations: number }
+    ) => {
+      let outputFile = options.output;
+      if (!outputFile) {
+        const inputPath = path.parse(inputFile);
+        outputFile = path.join(inputPath.dir, `${inputPath.name}_encrypted.bep`);
+        console.log(`Output file not specified, defaulting to: ${outputFile}`);
       }
 
-      const encryptedBackupString = await encryptBackup(decryptedPayload, options.password, options.iterations);
+      console.log(
+        `Encrypting ${inputFile} to ${outputFile} using ${options.iterations} iterations...`
+      );
 
-      const absoluteOutputPath = path.resolve(outputFile);
-      const outputDir = path.dirname(absoluteOutputPath);
-      await fs.mkdir(outputDir, { recursive: true });
+      try {
+        const absoluteInputPath = path.resolve(inputFile);
+        const decryptedJsonString = await fs.readFile(absoluteInputPath, 'utf-8');
+        const decryptedPayload = JSON.parse(decryptedJsonString) as DecryptedBackup;
 
-      await fs.writeFile(absoluteOutputPath, encryptedBackupString, 'utf-8');
-      console.log(`File encrypted successfully and saved to ${absoluteOutputPath}`);
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error('Encryption failed:', error.message);
-      } else {
-        console.error('An unknown error occurred during encryption:', error);
+        if (!decryptedPayload || typeof decryptedPayload !== 'object') {
+          throw new Error(
+            'Invalid input file content: Must be a valid JSON object representing a backup.'
+          );
+        }
+
+        const encryptedBackupString = await encryptBackup(
+          decryptedPayload,
+          options.password,
+          options.iterations
+        );
+
+        const absoluteOutputPath = path.resolve(outputFile);
+        const outputDir = path.dirname(absoluteOutputPath);
+        await fs.mkdir(outputDir, { recursive: true });
+
+        await fs.writeFile(absoluteOutputPath, encryptedBackupString, 'utf-8');
+        console.log(`File encrypted successfully and saved to ${absoluteOutputPath}`);
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error('Encryption failed:', error.message);
+        } else {
+          console.error('An unknown error occurred during encryption:', error);
+        }
+        process.exit(1);
       }
-      process.exit(1);
     }
-  });
+  );
 
 program
   .command('dec <inputFile>')
   .description('Decrypt an encrypted backup file.')
   .requiredOption('-p, --password <password>', 'Passphrase for decryption')
-  .option('-o, --output <outputFile>', 'Path to save the decrypted JSON. If omitted, prints to console.')
+  .option(
+    '-o, --output <outputFile>',
+    'Path to save the decrypted JSON. If omitted, prints to console.'
+  )
   .action(async (inputFile: string, options: { password: string; output?: string }) => {
     console.log(`Attempting to decrypt file: ${inputFile}`);
     try {
@@ -103,7 +129,7 @@ program
   .option('-o, --output <outputFile>', 'Path to save the upgraded encrypted file')
   .action(async (inputFile: string, options: { password: string; output?: string }) => {
     let outputFile = options.output;
-    
+
     console.log(`Attempting to upgrade file: ${inputFile}`);
 
     try {
@@ -129,15 +155,16 @@ program
         outputFile = path.join(dirname, `${basename}_upgraded${ext}`);
         console.log(`Output file not specified, defaulting to: ${outputFile}`);
       }
-      
+
       const absoluteOutputPath = path.resolve(outputFile);
       const outputDir = path.dirname(absoluteOutputPath);
       await fs.mkdir(outputDir, { recursive: true });
 
       console.log(`Writing upgraded file to: ${absoluteOutputPath}`);
       await fs.writeFile(absoluteOutputPath, upgradedEncryptedBackup, 'utf-8');
-      console.log(`File ${inputFile} upgraded and saved as ${absoluteOutputPath} with ${RECOMMENDED_PBKDF2_ITERATIONS} PBKDF2 iterations.`);
-
+      console.log(
+        `File ${inputFile} upgraded and saved as ${absoluteOutputPath} with ${RECOMMENDED_PBKDF2_ITERATIONS} PBKDF2 iterations.`
+      );
     } catch (error: unknown) {
       console.error('Error during file upgrade:');
       if (error instanceof Error) {
@@ -149,4 +176,4 @@ program
     }
   });
 
-program.parse(process.argv); 
+program.parse(process.argv);

@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeAll } from 'bun:test';
+import { beforeAll, describe, expect, it } from 'bun:test';
 import {
-  encryptBackup,
-  decryptBackup,
   // Import the main interface that users will use
   type BapMasterBackup,
-  type OneSatBackup // Added OneSatBackup for testing
+  type OneSatBackup, // Added OneSatBackup for testing
+  decryptBackup,
+  encryptBackup,
 } from '../src/index'; // Test the public API
 
 describe('Public API Functions (index.ts)', () => {
@@ -12,17 +12,17 @@ describe('Public API Functions (index.ts)', () => {
   const masterPayload: BapMasterBackup = {
     ids: 'masterIds',
     xprv: 'masterXprv',
-    mnemonic: 'master mnemonic phrase words a dozen or so here please and thank you'
+    mnemonic: 'master mnemonic phrase words a dozen or so here please and thank you',
   };
   const type42Payload: BapMasterBackup = {
     ids: 'type42Ids',
-    rootPk: 'L5EZftvrYaSudiozVRzTqLcHLNDoVn7H5HSfM9BAN6tMJX8oTWz6'
+    rootPk: 'L5EZftvrYaSudiozVRzTqLcHLNDoVn7H5HSfM9BAN6tMJX8oTWz6',
   };
   const oneSatPayload: OneSatBackup = {
     ordPk: 'KyMZUNynwhjevQQ4eQURisggnmkoQvcWNrWG8MPwztQALEzDEtCu',
     payPk: 'L156TApxcSCDGQgXRNahKiivZ57ZavGHREy1df4p6PuaRvXE3a1D',
     identityPk: 'L4rprVahLjG4LWdULUeoxaVyq9chGQzg8kSVgSWfBrdeyAZs9VLo',
-    label: 'Test 1Sat API'
+    label: 'Test 1Sat API',
   };
   // A payload that is an object but doesn't match any known structure
   const invalidStructurePayload = { some: 'data', not: 'aBackup' };
@@ -59,7 +59,7 @@ describe('Public API Functions (index.ts)', () => {
     it('should throw if payload is not an object', async () => {
       await expect(
         // @ts-expect-error Testing invalid payload type
-        encryptBackup("not an object", validPassphrase)
+        encryptBackup('not an object', validPassphrase)
       ).rejects.toThrow(
         'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, or OneSatBackup structure.'
       );
@@ -81,9 +81,9 @@ describe('Public API Functions (index.ts)', () => {
     });
 
     it('should throw if passphrase is an empty string', async () => {
-      await expect(
-        encryptBackup(masterPayload, '')
-      ).rejects.toThrow('Invalid passphrase: Passphrase must be a non-empty string.');
+      await expect(encryptBackup(masterPayload, '')).rejects.toThrow(
+        'Invalid passphrase: Passphrase must be a non-empty string.'
+      );
     });
 
     it('should throw if passphrase is too short (less than 8 characters)', async () => {
@@ -115,9 +115,9 @@ describe('Public API Functions (index.ts)', () => {
     });
 
     it('should throw if encryptedString is an empty string', async () => {
-      await expect(
-        decryptBackup('', validPassphrase)
-      ).rejects.toThrow('Invalid encryptedString: Must be a non-empty string.');
+      await expect(decryptBackup('', validPassphrase)).rejects.toThrow(
+        'Invalid encryptedString: Must be a non-empty string.'
+      );
     });
 
     it('should throw if passphrase is not a string for decrypt', async () => {
@@ -128,9 +128,9 @@ describe('Public API Functions (index.ts)', () => {
     });
 
     it('should throw if passphrase is an empty string for decrypt', async () => {
-      await expect(
-        decryptBackup(encryptedMasterString, '')
-      ).rejects.toThrow('Invalid passphrase: Passphrase must be a non-empty string.');
+      await expect(decryptBackup(encryptedMasterString, '')).rejects.toThrow(
+        'Invalid passphrase: Passphrase must be a non-empty string.'
+      );
     });
 
     // Core decryption logic (correct passphrase, corrupted data, etc.) is tested in crypto.test.ts
@@ -159,4 +159,4 @@ describe('Public API Functions (index.ts)', () => {
       expect((decrypted as OneSatBackup).identityPk).toBe(oneSatPayload.identityPk);
     });
   });
-}); 
+});

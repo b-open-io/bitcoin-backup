@@ -1,5 +1,5 @@
 import { PrivateKey } from '@bsv/sdk';
-import { encryptBackup, decryptBackup, type BapMasterBackup } from '../src/index';
+import { type BapMasterBackup, decryptBackup, encryptBackup } from '../src/index';
 
 /**
  * Demonstration of Type 42 key derivation and backup functionality
@@ -10,8 +10,8 @@ async function demonstrateType42() {
   // 1. Generate a master key for Alice
   const aliceMaster = PrivateKey.fromRandom();
   const alicePub = aliceMaster.toPublicKey();
-  
-  console.log('1. Alice\'s Master Key Generated:');
+
+  console.log("1. Alice's Master Key Generated:");
   console.log(`   WIF: ${aliceMaster.toWif()}`);
   console.log(`   Public Key: ${alicePub.toString()}\n`);
 
@@ -20,24 +20,24 @@ async function demonstrateType42() {
     ids: 'encrypted-bap-identity-data-alice',
     rootPk: aliceMaster.toWif(),
     label: 'Alice Primary Wallet',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
 
-  console.log('2. Alice\'s Type 42 Backup Created:');
+  console.log("2. Alice's Type 42 Backup Created:");
   console.log(JSON.stringify(aliceBackup, null, 2));
   console.log();
 
   // 3. Encrypt the backup
   const passphrase = 'super-secure-passphrase-2024';
   const encryptedBackup = await encryptBackup(aliceBackup, passphrase);
-  
+
   console.log('3. Backup Encrypted:');
   console.log(`   Encrypted length: ${encryptedBackup.length} characters`);
   console.log(`   Sample: ${encryptedBackup.substring(0, 50)}...\n`);
 
   // 4. Decrypt and verify
-  const decryptedBackup = await decryptBackup(encryptedBackup, passphrase) as BapMasterBackup;
-  
+  const decryptedBackup = (await decryptBackup(encryptedBackup, passphrase)) as BapMasterBackup;
+
   console.log('4. Backup Decrypted Successfully:');
   if ('rootPk' in decryptedBackup) {
     console.log(`   Master Key Match: ${decryptedBackup.rootPk === aliceBackup.rootPk}`);
@@ -47,33 +47,29 @@ async function demonstrateType42() {
 
   // 5. Demonstrate Type 42 key derivation
   console.log('5. Type 42 Key Derivation Demo:');
-  
+
   // Bob generates his key pair
   const bob = PrivateKey.fromRandom();
   const bobPub = bob.toPublicKey();
-  
+
   console.log(`   Bob's Public Key: ${bobPub.toString()}`);
 
   // Alice and Bob agree on invoice numbers for different purposes
-  const invoices = [
-    'payment-invoice-001',
-    'messaging-key-2024-01',
-    'file-encryption-session-xyz'
-  ];
+  const invoices = ['payment-invoice-001', 'messaging-key-2024-01', 'file-encryption-session-xyz'];
 
   for (const invoiceNumber of invoices) {
     // Alice derives a child private key for this specific purpose with Bob
     const aliceChildKey = aliceMaster.deriveChild(bobPub, invoiceNumber);
-    
+
     // Alice can derive Bob's corresponding public key
     const bobDerivedPubKey = bobPub.deriveChild(aliceMaster, invoiceNumber);
-    
+
     // Bob can derive his corresponding private key
     const bobChildKey = bob.deriveChild(alicePub, invoiceNumber);
-    
+
     // Verify the keys match
     const keysMatch = bobChildKey.toPublicKey().toString() === bobDerivedPubKey.toString();
-    
+
     console.log(`\n   Invoice: ${invoiceNumber}`);
     console.log(`   Alice derived key: ${aliceChildKey.toWif()}`);
     console.log(`   Bob derived key: ${bobChildKey.toWif()}`);
@@ -95,4 +91,4 @@ async function demonstrateType42() {
 }
 
 // Run the demo
-demonstrateType42().catch(console.error); 
+demonstrateType42().catch(console.error);

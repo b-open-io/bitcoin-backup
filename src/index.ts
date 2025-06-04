@@ -1,7 +1,7 @@
-import { encryptData, decryptData } from './crypto';
+import { decryptData, encryptData } from './crypto';
 import type {
   DecryptedBackup,
-  EncryptedBackup
+  EncryptedBackup,
   // BapMasterBackup, // Removed as it's covered by export *
   // BapMemberBackup, // Removed as it's covered by export *
   // WifBackup        // Removed as it's covered by export *
@@ -20,33 +20,36 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
 
   // Check for BapMasterBackup structure (legacy XPRV format)
   if (
-    'xprv' in p && typeof p.xprv === 'string' &&
-    'ids' in p && typeof p.ids === 'string' &&
-    'mnemonic' in p && typeof p.mnemonic === 'string'
+    'xprv' in p &&
+    typeof p.xprv === 'string' &&
+    'ids' in p &&
+    typeof p.ids === 'string' &&
+    'mnemonic' in p &&
+    typeof p.mnemonic === 'string'
   ) {
     return true;
   }
 
   // Check for BapMasterBackup structure (Type 42 format)
   if (
-    'rootPk' in p && typeof p.rootPk === 'string' &&
-    'ids' in p && typeof p.ids === 'string' &&
+    'rootPk' in p &&
+    typeof p.rootPk === 'string' &&
+    'ids' in p &&
+    typeof p.ids === 'string' &&
     !('xprv' in p) // Ensure it's not a legacy format
   ) {
     return true;
   }
 
   // Check for BapMemberBackup structure
-  if (
-    'wif' in p && typeof p.wif === 'string' &&
-    'id' in p && typeof p.id === 'string'
-  ) {
+  if ('wif' in p && typeof p.wif === 'string' && 'id' in p && typeof p.id === 'string') {
     return true;
   }
 
   // Check for WifBackup structure
   if (
-    'wif' in p && typeof p.wif === 'string' &&
+    'wif' in p &&
+    typeof p.wif === 'string' &&
     !('id' in p) && // Differentiates from BapMemberBackup
     !('xprv' in p) && // Differentiates from BapMasterBackupLegacy
     !('rootPk' in p) // Differentiates from MasterBackupType42
@@ -56,16 +59,18 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
 
   // Check for OneSatBackup structure
   if (
-    'ordPk' in p && typeof p.ordPk === 'string' &&
-    'payPk' in p && typeof p.payPk === 'string' &&
-    'identityPk' in p && typeof p.identityPk === 'string'
+    'ordPk' in p &&
+    typeof p.ordPk === 'string' &&
+    'payPk' in p &&
+    typeof p.payPk === 'string' &&
+    'identityPk' in p &&
+    typeof p.identityPk === 'string'
   ) {
     return true;
   }
 
   return false;
 }
-
 
 /**
  * Encrypts a backup payload object into an encrypted string.
@@ -101,7 +106,7 @@ export async function encryptBackup(
  * Attempts decryption with default and legacy iteration counts if not specified.
  * @param encryptedString The encrypted backup string (Base64 encoded).
  * @param passphrase The passphrase used for encryption.
- * @param attemptIterations Optional. A specific iteration count, or an array of counts to try. 
+ * @param attemptIterations Optional. A specific iteration count, or an array of counts to try.
  *                        If undefined, defaults to trying [DEFAULT_PBKDF2_ITERATIONS, LEGACY_PBKDF2_ITERATIONS].
  * @returns A promise that resolves to the decrypted backup payload.
  * @throws Will throw an error if decryption fails or the format is invalid.
@@ -123,4 +128,8 @@ export async function decryptBackup(
 // Re-export interfaces for library consumers
 export * from './interfaces';
 // Optionally re-export constants if they are part of the public API
-export { DEFAULT_PBKDF2_ITERATIONS, LEGACY_PBKDF2_ITERATIONS, RECOMMENDED_PBKDF2_ITERATIONS } from './crypto';
+export {
+  DEFAULT_PBKDF2_ITERATIONS,
+  LEGACY_PBKDF2_ITERATIONS,
+  RECOMMENDED_PBKDF2_ITERATIONS,
+} from './crypto';
