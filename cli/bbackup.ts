@@ -5,9 +5,9 @@ import path from 'node:path';
 import { Command } from 'commander';
 import {
   type DecryptedBackup,
-  RECOMMENDED_PBKDF2_ITERATIONS,
   decryptBackup,
   encryptBackup,
+  RECOMMENDED_PBKDF2_ITERATIONS,
 } from '../src/index';
 
 const program = new Command();

@@ -33,3 +33,6 @@ yarn-error.log*
 # Test coverage
 coverage/
 lcov-report/
+
+# Project documentation (auto-generated for Claude Code)
+CLAUDE.md

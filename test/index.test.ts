@@ -2,9 +2,9 @@ import { beforeAll, describe, expect, it } from 'bun:test';
 import {
   // Import the main interface that users will use
   type BapMasterBackup,
-  type OneSatBackup, // Added OneSatBackup for testing
   decryptBackup,
   encryptBackup,
+  type OneSatBackup, // Added OneSatBackup for testing
 } from '../src/index'; // Test the public API
 
 describe('Public API Functions (index.ts)', () => {
@@ -43,7 +43,7 @@ describe('Public API Functions (index.ts)', () => {
         // @ts-expect-error Testing invalid payload type
         encryptBackup(invalidStructurePayload, validPassphrase)
       ).rejects.toThrow(
-        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, or OneSatBackup structure.'
+        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, or VaultBackup structure.'
       );
     });
 
@@ -52,7 +52,7 @@ describe('Public API Functions (index.ts)', () => {
         // @ts-expect-error Testing invalid payload type
         encryptBackup(null, validPassphrase)
       ).rejects.toThrow(
-        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, or OneSatBackup structure.'
+        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, or VaultBackup structure.'
       );
     });
 
@@ -61,7 +61,7 @@ describe('Public API Functions (index.ts)', () => {
         // @ts-expect-error Testing invalid payload type
         encryptBackup('not an object', validPassphrase)
       ).rejects.toThrow(
-        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, or OneSatBackup structure.'
+        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, or VaultBackup structure.'
       );
     });
 

@@ -1,15 +1,14 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
 import {
   DEFAULT_PBKDF2_ITERATIONS,
-  LEGACY_PBKDF2_ITERATIONS,
-  RECOMMENDED_PBKDF2_ITERATIONS,
   decryptData,
   encryptData,
+  LEGACY_PBKDF2_ITERATIONS,
+  RECOMMENDED_PBKDF2_ITERATIONS,
 } from '../src/crypto';
 import type {
   BapMasterBackup,
   BapMemberBackup,
-  DecryptedBackup,
   EncryptedBackup,
   OneSatBackup,
   WifBackup,
@@ -21,7 +20,7 @@ import type {
 
 describe('Crypto Functions', () => {
   const passphrase = 'strongtes!passphr@se';
-  const veryShortPassphrase = 'short';
+  const _veryShortPassphrase = 'short';
 
   // Test Payloads
   const masterBackupPayload: BapMasterBackup = {

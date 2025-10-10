@@ -7,13 +7,12 @@ describe('Type 42 Integration with BAP', () => {
   const passphrase = 'super-secure-passphrase-42';
 
   it('should create, encrypt, and decrypt Type 42 backup from BAP', async () => {
-    // 1. Generate a master key
+    // 1. Generate a master key (Type 42 uses WIF private key)
     const rootPk = PrivateKey.fromRandom();
     const masterWif = rootPk.toWif();
-    // 2. Create BAP instance with Type 42
-    const bap = new BAP({
-      rootPk: masterWif,
-    });
+
+    // 2. Create BAP instance with Type 42 - pass { rootPk: wifKey } object
+    const bap = new BAP({ rootPk: masterWif });
 
     // 3. Create some identities
     const id1 = bap.newId();
@@ -23,10 +22,16 @@ describe('Type 42 Integration with BAP', () => {
     const id2 = bap.newId();
     id2.setAttribute('name', 'Bob Test');
 
-    // 4. Export as Type 42 backup (unified method)
-    const backup = bap.exportForBackup('Integration Test Backup');
+    // 4. Export IDs (encrypted) and create Type 42 backup
+    const encryptedIds = bap.exportIds(); // Defaults to encrypted=true, returns encrypted string
 
-    // 5. Encrypt the backup
+    const backup: BapMasterBackup = {
+      rootPk: masterWif,
+      ids: encryptedIds,
+      label: 'Integration Test Backup',
+    };
+
+    // 5. Encrypt the backup with bitcoin-backup
     const encrypted = await encryptBackup(backup, passphrase);
 
     // 6. Decrypt the backup
@@ -43,13 +48,11 @@ describe('Type 42 Integration with BAP', () => {
       throw new Error('Unexpected backup format');
     }
 
-    // 8. Create new BAP instance from decrypted backup
-    const bapRestored = new BAP({
-      rootPk: decrypted.rootPk as string,
-    });
+    // 8. Create new BAP instance from decrypted backup (Type 42)
+    const bapRestored = new BAP({ rootPk: decrypted.rootPk as string });
 
     // 9. Import the encrypted IDs
-    bapRestored.importIds(decrypted.ids, true);
+    bapRestored.importIds(decrypted.ids);
 
     // 10. Verify we have the same identities
     const idKeys = bapRestored.listIds();

@@ -21,7 +21,8 @@ export type DecryptedBackupPayload =
   | BapMasterBackup
   | BapMemberBackup
   | WifBackup
-  | OneSatBackup;
+  | OneSatBackup
+  | VaultBackup;
 ```
 
 ## Backup Payload Interfaces
@@ -93,6 +94,29 @@ export interface OneSatBackup {
   createdAt?: string;   // ISO 8601 timestamp (populated by encryptBackup if not provided)
 }
 ```
+
+### `VaultBackup`
+
+Represents a backup of an encrypted key vault. The application encrypts the vault with its own encryption, and bitcoin-backup encrypts the entire `VaultBackup` object - just like all other formats in this library.
+
+```typescript
+export interface VaultBackup {
+  encryptedVault: string;  // Application's encrypted vault blob
+  scheme?: string;         // Vault encryption scheme identifier (e.g., "vscode-bitcoin-v1", "custom-vault-v2")
+  label?: string;          // User-defined label (optional)
+  createdAt?: string;      // ISO 8601 timestamp (populated by encryptBackup if not provided)
+}
+```
+
+**Detection**: VaultBackup is identified by the presence of the `encryptedVault` field.
+
+**Double Encryption**: The vault is already encrypted by the application, and bitcoin-backup encrypts the whole backup with strong, universal encryption (600k PBKDF2 iterations, AES-256-GCM).
+
+**Scheme Field**: The optional `scheme` field identifies HOW the vault was assembled and encrypted by the application (not by bitcoin-backup, which uses universal encryption). This enables interoperability between different vault implementations.
+
+- **Default scheme**: `"vscode-bitcoin-v1"` (VSCode Bitcoin Extension format)
+- **Custom schemes**: Applications can define their own scheme identifiers (e.g., `"my-wallet-v1"`, `"mobile-app-v2"`)
+- **Extensibility**: The scheme field allows applications to understand each other's vault formats while maintaining bitcoin-backup's universal encryption layer
 
 ## Constants
 

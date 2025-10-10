@@ -1,7 +1,7 @@
 import type { BuildConfig } from 'bun'
-import dts from 'bun-plugin-dts'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { generateLibraryDeclarations } from './scripts/generate-dts'
 
 const defaultLibraryConfig: BuildConfig = {
   entrypoints: ['./src/index.ts'],
@@ -19,10 +19,10 @@ const cliConfig: BuildConfig = {
   naming: "[name].js"
 }
 
+// Build library (ESM and CJS)
 await Promise.all([
   Bun.build({
     ...defaultLibraryConfig,
-    plugins: [dts()],
     format: 'esm',
     naming: "[dir]/[name].js",
   }),
@@ -32,6 +32,9 @@ await Promise.all([
     naming: "[dir]/[name].cjs",
   })
 ])
+
+// Generate TypeScript declarations
+await generateLibraryDeclarations()
 
 const cliBuildResult = await Bun.build(cliConfig)
 

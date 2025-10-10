@@ -57,7 +57,7 @@ npx bbackup dec wallet.bep -p "your-strong-password-here"
 
 *   **Chain-Agnostic Core:** Securely encrypt and decrypt WIF private keys, xprv/mnemonic phrases for HD wallets, or custom data structures from any blockchain or cryptographic application.
 *   **Strong Encryption:** Secures backup data using AES-256-GCM with PBKDF2 key derivation (see Security Model).
-*   **Multiple Backup Formats:** Supports various backup structures like `BapMasterBackup`, `BapMemberBackup`, `WifBackup`, and `OneSatBackup`. The type of backup is inferred from payload structure. (See [API Documentation](./API.md) for full type details).
+*   **Multiple Backup Formats:** Supports various backup structures like `BapMasterBackup`, `BapMemberBackup`, `WifBackup`, `OneSatBackup`, and `VaultBackup`. The type of backup is inferred from payload structure. (See [API Documentation](./API.md) for full type details).
 *   **Handles Unencrypted Data:** Easily encrypt existing unencrypted backup objects.
 *   **Legacy Support:** Capable of decrypting older, raw WIF-string based encrypted backups.
 *   **Type-Safe:** Fully written in TypeScript.
@@ -78,7 +78,7 @@ This library employs AES-256-GCM for authenticated encryption. The encryption ke
 
 The primary API consists of two main functions: `encryptBackup` and `decryptBackup`.
 
-Detailed type definitions for `BapMasterBackup`, `BapMemberBackup`, `WifBackup`, `OneSatBackup`, and `DecryptedBackupPayload` can be found in [./API.md](./API.md).
+Detailed type definitions for `BapMasterBackup`, `BapMemberBackup`, `WifBackup`, `OneSatBackup`, `VaultBackup`, and `DecryptedBackupPayload` can be found in [./API.md](./API.md).
 
 ### `encryptBackup(payload: DecryptedBackupPayload, passphrase: string, iterations?: number): Promise<EncryptedBackupString>`
 
@@ -214,6 +214,7 @@ interface BapMasterBackup {
 - **BapMemberBackup**: Individual member key backups
 - **WifBackup**: Simple WIF key backups
 - **OneSatBackup**: 1Sat ordinals wallet backups
+- **VaultBackup**: Generic encrypted key vault backups (compatible with VSCode Bitcoin Extension and other key management systems)
 
 ## Usage
 
@@ -298,6 +299,7 @@ bbackup decrypt encrypted.backup -p "passphrase" -o decrypted.json
 - `BapMemberBackup`: Member key backup format
 - `WifBackup`: Simple WIF backup format
 - `OneSatBackup`: 1Sat ordinals backup format
+- `VaultBackup`: Encrypted key vault backups
 
 ## Migration Guide
 

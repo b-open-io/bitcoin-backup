@@ -39,14 +39,14 @@
   "bugs": "https://github.com/rohenaz/bitcoin-backup/issues",
   "author": "Satchmo",
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "@bsv/sdk": "^1.6.0",
-    "@types/bun": "^1.2.15",
+    "@biomejs/biome": "^2.2.5",
+    "@bsv/sdk": "^1.8.2",
+    "@types/bun": "^1.2.23",
     "@types/commander": "^2.12.5",
-    "bun-plugin-dts": "^0.3.0"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "commander": "^14.0.0"
+    "commander": "^14.0.1"
   },
   "peerDependencies": {
     "@bsv/sdk": "^1.5.2"

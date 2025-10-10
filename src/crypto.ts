@@ -5,6 +5,7 @@ import type {
   DecryptedBackup,
   EncryptedBackup,
   OneSatBackup,
+  VaultBackup,
   WifBackup,
 } from './interfaces';
 
@@ -29,7 +30,7 @@ const AES_KEY_LENGTH_BITS = 256;
  */
 async function deriveKey(
   passphrase: string,
-  salt: Uint8Array,
+  salt: Uint8Array<ArrayBuffer>,
   iterations: number = RECOMMENDED_PBKDF2_ITERATIONS // Default to new recommended standard
 ): Promise<CryptoKey> {
   const passphraseBytes = Uint8Array.from(toArray(passphrase, 'utf8'));
@@ -45,8 +46,8 @@ async function deriveKey(
   return globalThis.crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt: salt,
-      iterations: iterations, // Use provided or defaulted iterations
+      salt,
+      iterations,
       hash: 'SHA-256',
     },
     keyMaterial,
@@ -154,6 +155,7 @@ export async function decryptData(
           if ('wif' in parsedJson && 'id' in parsedJson) return parsedJson as BapMemberBackup;
           if ('ordPk' in parsedJson && 'payPk' in parsedJson && 'identityPk' in parsedJson)
             return parsedJson as OneSatBackup;
+          if ('encryptedVault' in parsedJson) return parsedJson as VaultBackup;
           if (
             'wif' in parsedJson &&
             !('id' in parsedJson) &&

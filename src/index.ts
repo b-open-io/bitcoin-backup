@@ -69,6 +69,11 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
     return true;
   }
 
+  // Check for VaultBackup structure - just needs encryptedVault
+  if ('encryptedVault' in p && typeof p.encryptedVault === 'string') {
+    return true;
+  }
+
   return false;
 }
 
@@ -88,7 +93,7 @@ export async function encryptBackup(
 ): Promise<EncryptedBackup> {
   if (!isValidPayload(payload)) {
     throw new Error(
-      'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, or OneSatBackup structure.'
+      'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, or VaultBackup structure.'
     );
   }
   if (typeof passphrase !== 'string' || passphrase.length === 0) {
@@ -125,11 +130,11 @@ export async function decryptBackup(
   return decryptData(encryptedString, passphrase, attemptIterations);
 }
 
-// Re-export interfaces for library consumers
-export * from './interfaces';
 // Optionally re-export constants if they are part of the public API
 export {
   DEFAULT_PBKDF2_ITERATIONS,
   LEGACY_PBKDF2_ITERATIONS,
   RECOMMENDED_PBKDF2_ITERATIONS,
 } from './crypto';
+// Re-export interfaces for library consumers
+export * from './interfaces';
