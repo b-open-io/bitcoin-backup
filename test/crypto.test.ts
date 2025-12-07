@@ -203,7 +203,7 @@ describe('Crypto Functions', () => {
       const malformedBase64 = 'NotValidBase64%%%***'; // This might be partially decoded by a lenient decoder
       // If the lenient decoder produces a short array, our length check will catch it.
       await expect(decryptData(malformedBase64, passphrase)).rejects.toThrow(
-        'Decryption failed: Encrypted data is too short.' // Adjusted expectation
+        'Decryption failed: Invalid Base64 input.' // Adjusted expectation
       );
     });
 

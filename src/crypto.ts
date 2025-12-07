@@ -7,6 +7,8 @@ import type {
   OneSatBackup,
   VaultBackup,
   WifBackup,
+  YoursWalletBackup,
+  YoursWalletZipBackup,
 } from './interfaces';
 
 const { toArray, toBase64 } = Utils;
@@ -153,6 +155,16 @@ export async function decryptData(
             return parsedJson as BapMasterBackup;
           if ('rootPk' in parsedJson && 'ids' in parsedJson) return parsedJson as BapMasterBackup;
           if ('wif' in parsedJson && 'id' in parsedJson) return parsedJson as BapMemberBackup;
+          // Check for YoursWalletBackup before OneSatBackup (more specific)
+          if (
+            'payPk' in parsedJson &&
+            'ordPk' in parsedJson &&
+            ('mnemonic' in parsedJson || 'payDerivationPath' in parsedJson || 'ordDerivationPath' in parsedJson)
+          )
+            return parsedJson as YoursWalletBackup;
+          // Check for YoursWalletZipBackup
+          if ('chromeStorage' in parsedJson && 'accountData' in parsedJson)
+            return parsedJson as YoursWalletZipBackup;
           if ('ordPk' in parsedJson && 'payPk' in parsedJson && 'identityPk' in parsedJson)
             return parsedJson as OneSatBackup;
           if ('encryptedVault' in parsedJson) return parsedJson as VaultBackup;

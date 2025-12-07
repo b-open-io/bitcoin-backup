@@ -55,12 +55,42 @@ export interface VaultBackup {
   createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if not provided)
 }
 
+/**
+ * YoursWallet JSON backup format - WIF keys with optional mnemonic and derivation paths
+ * Compatible with Yours Wallet's JSON import/export
+ */
+export interface YoursWalletBackup {
+  mnemonic?: string; // BIP39 mnemonic phrase (optional - not present in WIF-only exports)
+  payPk: string; // Payment Private Key WIF
+  payDerivationPath?: string; // Payment key derivation path (e.g., "m/44'/236'/0'/1/0")
+  ordPk: string; // Ordinals Private Key WIF
+  ordDerivationPath?: string; // Ordinals key derivation path (e.g., "m/44'/236'/1'/0/0")
+  identityPk?: string; // Identity Private Key WIF (optional for compatibility)
+  identityDerivationPath?: string; // Identity key derivation path (e.g., "m/0'/236'/0'/0/0")
+  label?: string; // User-defined label (optional)
+  createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if not provided)
+}
+
+/**
+ * YoursWallet ZIP backup format - contains the full Yours Wallet export
+ */
+export interface YoursWalletZipBackup {
+  chromeStorage: any; // Chrome storage JSON with accounts, settings, etc.
+  accountData: any; // Account-specific transaction data
+  blocks?: Buffer[]; // SPV block headers (optional)
+  txns?: Buffer[]; // Transaction data (optional)
+  label?: string; // User-defined label (optional)
+  createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if not provided)
+}
+
 export type DecryptedBackup =
   | BapMasterBackup
   | BapMemberBackup
   | WifBackup
   | OneSatBackup
-  | VaultBackup;
+  | VaultBackup
+  | YoursWalletBackup
+  | YoursWalletZipBackup;
 
 // Represents the final encrypted string, typically Base64 encoded
 export type EncryptedBackup = string;

@@ -43,7 +43,7 @@ describe('Public API Functions (index.ts)', () => {
         // @ts-expect-error Testing invalid payload type
         encryptBackup(invalidStructurePayload, validPassphrase)
       ).rejects.toThrow(
-        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, or VaultBackup structure.'
+        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure.'
       );
     });
 
@@ -52,7 +52,7 @@ describe('Public API Functions (index.ts)', () => {
         // @ts-expect-error Testing invalid payload type
         encryptBackup(null, validPassphrase)
       ).rejects.toThrow(
-        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, or VaultBackup structure.'
+        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure.'
       );
     });
 
@@ -61,7 +61,7 @@ describe('Public API Functions (index.ts)', () => {
         // @ts-expect-error Testing invalid payload type
         encryptBackup('not an object', validPassphrase)
       ).rejects.toThrow(
-        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, or VaultBackup structure.'
+        'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure.'
       );
     });
 

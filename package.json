@@ -1,7 +1,7 @@
 {
   "name": "bitcoin-backup",
   "type": "module",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,12 +31,12 @@
     "bun"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/rohenaz/bitcoin-backup",
+  "homepage": "https://github.com/b-open-io/bitcoin-backup",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rohenaz/bitcoin-backup.git"
+    "url": "git+https://github.com/b-open-io/bitcoin-backup.git"
   },
-  "bugs": "https://github.com/rohenaz/bitcoin-backup/issues",
+  "bugs": "https://github.com/b-open-io/bitcoin-backup/issues",
   "author": "Satchmo",
   "devDependencies": {
     "@biomejs/biome": "^2.3.8",

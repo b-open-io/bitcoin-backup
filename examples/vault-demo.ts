@@ -74,7 +74,7 @@ async function demoVaultBackup() {
   console.log('✓ Interoperability with scheme field:');
   console.log('  - Default scheme: "vscode-bitcoin-v1"');
   console.log('  - Custom schemes: extend for your own vault format');
-  console.log('  - Applications can understand each other\'s vaults');
+  console.log("  - Applications can understand each other's vaults");
   console.log();
 }
 

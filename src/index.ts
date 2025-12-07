@@ -74,6 +74,22 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
     return true;
   }
 
+  // Check for YoursWalletBackup structure - has payPk and ordPk like OneSat, but may have mnemonic
+  if (
+    'payPk' in p &&
+    typeof p.payPk === 'string' &&
+    'ordPk' in p &&
+    typeof p.ordPk === 'string' &&
+    ('mnemonic' in p || 'payDerivationPath' in p || 'ordDerivationPath' in p) // Distinguishes from OneSatBackup
+  ) {
+    return true;
+  }
+
+  // Check for YoursWalletZipBackup structure
+  if ('chromeStorage' in p && typeof p.chromeStorage === 'object' && 'accountData' in p) {
+    return true;
+  }
+
   return false;
 }
 
@@ -93,7 +109,7 @@ export async function encryptBackup(
 ): Promise<EncryptedBackup> {
   if (!isValidPayload(payload)) {
     throw new Error(
-      'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, or VaultBackup structure.'
+      'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure.'
     );
   }
   if (typeof passphrase !== 'string' || passphrase.length === 0) {
