@@ -1,11 +1,11 @@
-import { decryptData, encryptData } from './crypto';
+import { decryptData, encryptData } from "./crypto";
 import type {
-  DecryptedBackup,
-  EncryptedBackup,
-  // BapMasterBackup, // Removed as it's covered by export *
-  // BapMemberBackup, // Removed as it's covered by export *
-  // WifBackup        // Removed as it's covered by export *
-} from './interfaces';
+	DecryptedBackup,
+	EncryptedBackup,
+	// BapMasterBackup, // Removed as it's covered by export *
+	// BapMemberBackup, // Removed as it's covered by export *
+	// WifBackup        // Removed as it's covered by export *
+} from "./interfaces";
 
 /**
  * Validates the structure of a payload intended for encryption.
@@ -13,84 +13,93 @@ import type {
  * @returns True if the payload is valid, false otherwise.
  */
 function isValidPayload(payload: unknown): payload is DecryptedBackup {
-  if (!payload || typeof payload !== 'object') return false;
+	if (!payload || typeof payload !== "object") return false;
 
-  // Narrow down type for property checks
-  const p = payload as Record<string, unknown>;
+	// Narrow down type for property checks
+	const p = payload as Record<string, unknown>;
 
-  // Check for BapMasterBackup structure (legacy XPRV format)
-  if (
-    'xprv' in p &&
-    typeof p.xprv === 'string' &&
-    'ids' in p &&
-    typeof p.ids === 'string' &&
-    'mnemonic' in p &&
-    typeof p.mnemonic === 'string'
-  ) {
-    return true;
-  }
+	// Check for BapMasterBackup structure (legacy XPRV format)
+	if (
+		"xprv" in p &&
+		typeof p.xprv === "string" &&
+		"ids" in p &&
+		typeof p.ids === "string" &&
+		"mnemonic" in p &&
+		typeof p.mnemonic === "string"
+	) {
+		return true;
+	}
 
-  // Check for BapMasterBackup structure (Type 42 format)
-  if (
-    'rootPk' in p &&
-    typeof p.rootPk === 'string' &&
-    'ids' in p &&
-    typeof p.ids === 'string' &&
-    !('xprv' in p) // Ensure it's not a legacy format
-  ) {
-    return true;
-  }
+	// Check for BapMasterBackup structure (Type 42 format)
+	if (
+		"rootPk" in p &&
+		typeof p.rootPk === "string" &&
+		"ids" in p &&
+		typeof p.ids === "string" &&
+		!("xprv" in p) // Ensure it's not a legacy format
+	) {
+		return true;
+	}
 
-  // Check for BapMemberBackup structure
-  if ('wif' in p && typeof p.wif === 'string' && 'id' in p && typeof p.id === 'string') {
-    return true;
-  }
+	// Check for BapMemberBackup structure
+	if (
+		"wif" in p &&
+		typeof p.wif === "string" &&
+		"id" in p &&
+		typeof p.id === "string"
+	) {
+		return true;
+	}
 
-  // Check for WifBackup structure
-  if (
-    'wif' in p &&
-    typeof p.wif === 'string' &&
-    !('id' in p) && // Differentiates from BapMemberBackup
-    !('xprv' in p) && // Differentiates from BapMasterBackupLegacy
-    !('rootPk' in p) // Differentiates from MasterBackupType42
-  ) {
-    return true;
-  }
+	// Check for WifBackup structure
+	if (
+		"wif" in p &&
+		typeof p.wif === "string" &&
+		!("id" in p) && // Differentiates from BapMemberBackup
+		!("xprv" in p) && // Differentiates from BapMasterBackupLegacy
+		!("rootPk" in p) // Differentiates from MasterBackupType42
+	) {
+		return true;
+	}
 
-  // Check for OneSatBackup structure
-  if (
-    'ordPk' in p &&
-    typeof p.ordPk === 'string' &&
-    'payPk' in p &&
-    typeof p.payPk === 'string' &&
-    'identityPk' in p &&
-    typeof p.identityPk === 'string'
-  ) {
-    return true;
-  }
+	// Check for OneSatBackup structure
+	if (
+		"ordPk" in p &&
+		typeof p.ordPk === "string" &&
+		"payPk" in p &&
+		typeof p.payPk === "string" &&
+		"identityPk" in p &&
+		typeof p.identityPk === "string"
+	) {
+		return true;
+	}
 
-  // Check for VaultBackup structure - just needs encryptedVault
-  if ('encryptedVault' in p && typeof p.encryptedVault === 'string') {
-    return true;
-  }
+	// Check for VaultBackup structure - just needs encryptedVault
+	if ("encryptedVault" in p && typeof p.encryptedVault === "string") {
+		return true;
+	}
 
-  // Check for YoursWalletBackup structure - has payPk and ordPk like OneSat, but may have mnemonic
-  if (
-    'payPk' in p &&
-    typeof p.payPk === 'string' &&
-    'ordPk' in p &&
-    typeof p.ordPk === 'string' &&
-    ('mnemonic' in p || 'payDerivationPath' in p || 'ordDerivationPath' in p) // Distinguishes from OneSatBackup
-  ) {
-    return true;
-  }
+	// Check for YoursWalletBackup structure - has payPk and ordPk like OneSat, but may have mnemonic
+	if (
+		"payPk" in p &&
+		typeof p.payPk === "string" &&
+		"ordPk" in p &&
+		typeof p.ordPk === "string" &&
+		("mnemonic" in p || "payDerivationPath" in p || "ordDerivationPath" in p) // Distinguishes from OneSatBackup
+	) {
+		return true;
+	}
 
-  // Check for YoursWalletZipBackup structure
-  if ('chromeStorage' in p && typeof p.chromeStorage === 'object' && 'accountData' in p) {
-    return true;
-  }
+	// Check for YoursWalletZipBackup structure
+	if (
+		"chromeStorage" in p &&
+		typeof p.chromeStorage === "object" &&
+		"accountData" in p
+	) {
+		return true;
+	}
 
-  return false;
+	return false;
 }
 
 /**
@@ -103,22 +112,26 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
  * @throws Will throw an error if the payload or passphrase is invalid.
  */
 export async function encryptBackup(
-  payload: DecryptedBackup,
-  passphrase: string,
-  iterations?: number
+	payload: DecryptedBackup,
+	passphrase: string,
+	iterations?: number
 ): Promise<EncryptedBackup> {
-  if (!isValidPayload(payload)) {
-    throw new Error(
-      'Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure.'
-    );
-  }
-  if (typeof passphrase !== 'string' || passphrase.length === 0) {
-    throw new Error('Invalid passphrase: Passphrase must be a non-empty string.');
-  }
-  if (passphrase.length < 8) {
-    throw new Error('Invalid passphrase: Passphrase must be at least 8 characters long.');
-  }
-  return encryptData(payload, passphrase, iterations);
+	if (!isValidPayload(payload)) {
+		throw new Error(
+			"Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure."
+		);
+	}
+	if (typeof passphrase !== "string" || passphrase.length === 0) {
+		throw new Error(
+			"Invalid passphrase: Passphrase must be a non-empty string."
+		);
+	}
+	if (passphrase.length < 8) {
+		throw new Error(
+			"Invalid passphrase: Passphrase must be at least 8 characters long."
+		);
+	}
+	return encryptData(payload, passphrase, iterations);
 }
 
 /**
@@ -133,24 +146,28 @@ export async function encryptBackup(
  * @throws Will throw an error if decryption fails or the format is invalid.
  */
 export async function decryptBackup(
-  encryptedString: EncryptedBackup,
-  passphrase: string,
-  attemptIterations?: number | number[]
+	encryptedString: EncryptedBackup,
+	passphrase: string,
+	attemptIterations?: number | number[]
 ): Promise<DecryptedBackup> {
-  if (typeof encryptedString !== 'string' || encryptedString.length === 0) {
-    throw new Error('Invalid encryptedString: Must be a non-empty string.');
-  }
-  if (typeof passphrase !== 'string' || passphrase.length === 0) {
-    throw new Error('Invalid passphrase: Passphrase must be a non-empty string.');
-  }
-  return decryptData(encryptedString, passphrase, attemptIterations);
+	if (typeof encryptedString !== "string" || encryptedString.length === 0) {
+		throw new Error("Invalid encryptedString: Must be a non-empty string.");
+	}
+	if (typeof passphrase !== "string" || passphrase.length === 0) {
+		throw new Error(
+			"Invalid passphrase: Passphrase must be a non-empty string."
+		);
+	}
+	return decryptData(encryptedString, passphrase, attemptIterations);
 }
 
 // Optionally re-export constants if they are part of the public API
 export {
-  DEFAULT_PBKDF2_ITERATIONS,
-  LEGACY_PBKDF2_ITERATIONS,
-  RECOMMENDED_PBKDF2_ITERATIONS,
-} from './crypto';
+	DEFAULT_PBKDF2_ITERATIONS,
+	LEGACY_PBKDF2_ITERATIONS,
+	RECOMMENDED_PBKDF2_ITERATIONS,
+} from "./crypto";
+// Re-export type guards for backup type detection
+export * from "./guards";
 // Re-export interfaces for library consumers
-export * from './interfaces';
+export * from "./interfaces";
