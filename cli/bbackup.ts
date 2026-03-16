@@ -15,7 +15,7 @@ const program = new Command();
 program
   .name('bbackup')
   .description('CLI tool for managing and securing Bitcoin-related identity backups.')
-  .version('0.0.9');
+  .version('0.0.10');
 
 /**
  * Resolve a password from explicit flag, Touch ID cache, or error.

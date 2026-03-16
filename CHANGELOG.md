@@ -1,12 +1,17 @@
 # Changelog
 
+## 0.0.10
+
+### Fixed
+- `@1sat/vault` moved from optional peer dep to regular dependency so Touch ID works out of the box on `bun install -g bitcoin-backup`
+
 ## 0.0.9
 
 ### Added
 - Touch ID password cache via `--touchid` flag on enc, dec, and upg commands
 - `bbackup forget <file>` command to remove cached passwords
 - `src/touchid.ts` module for programmatic SE password caching
-- `@1sat/vault` as optional peer dependency for Secure Enclave support
+- `@1sat/vault` as dependency for Secure Enclave support
 
 ## 0.0.8
 
