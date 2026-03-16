@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.9
+
+### Added
+- Touch ID password cache via `--touchid` flag on enc, dec, and upg commands
+- `bbackup forget <file>` command to remove cached passwords
+- `src/touchid.ts` module for programmatic SE password caching
+- `@1sat/vault` as optional peer dependency for Secure Enclave support
+
 ## 0.0.8
 
 ### Changed

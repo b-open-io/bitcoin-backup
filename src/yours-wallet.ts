@@ -12,7 +12,7 @@ export function extractKeysFromChromeStorage(chromeStorage: any): YoursWalletBac
     }
 
     const account = chromeStorage.accounts[selectedAccount];
-    
+
     // Check if we have encrypted keys - these need to be decrypted with the wallet password
     if (account.encryptedKeys) {
       // For now, return null as we cannot decrypt without the wallet password
@@ -29,7 +29,7 @@ export function extractKeysFromChromeStorage(chromeStorage: any): YoursWalletBac
         ordPk: account.privateKeys.ordPk || '',
         ordDerivationPath: account.derivationPaths?.ord || "m/44'/236'/1'/0/0",
         identityPk: account.privateKeys.identityPk || '',
-        identityDerivationPath: account.derivationPaths?.identity || "m/0'/236'/0'/0/0"
+        identityDerivationPath: account.derivationPaths?.identity || "m/0'/236'/0'/0/0",
       };
     }
 
@@ -47,7 +47,9 @@ export function extractKeysFromChromeStorage(chromeStorage: any): YoursWalletBac
 export async function parseYoursWalletZip(zipBuffer: Buffer): Promise<YoursWalletZipBackup> {
   // This would need an unzip library like 'unzipper' or 'node-stream-zip'
   // For now, we'll just document the expected structure
-  throw new Error('ZIP parsing not yet implemented. Use unzip command line tool to extract and process files individually.');
+  throw new Error(
+    'ZIP parsing not yet implemented. Use unzip command line tool to extract and process files individually.'
+  );
 }
 
 /**

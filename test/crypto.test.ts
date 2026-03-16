@@ -7,8 +7,8 @@ import {
   RECOMMENDED_PBKDF2_ITERATIONS,
 } from '../src/crypto';
 import type {
-  BapMasterBackup,
   BapAccountBackup,
+  BapMasterBackup,
   EncryptedBackup,
   OneSatBackup,
   WifBackup,

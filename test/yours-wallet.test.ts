@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { encryptBackup, decryptBackup } from '../src/index';
-import type { YoursWalletBackup, YoursWalletZipBackup, OneSatBackup } from '../src/interfaces';
+import { decryptBackup, encryptBackup } from '../src/index';
+import type { OneSatBackup, YoursWalletBackup, YoursWalletZipBackup } from '../src/interfaces';
 import { isYoursWalletBackup, isYoursWalletZipBackup } from '../src/yours-wallet';
 
 describe('YoursWallet Backup', () => {
@@ -9,7 +9,8 @@ describe('YoursWallet Backup', () => {
   describe('YoursWalletBackup (JSON format)', () => {
     // Full format with mnemonic and derivation paths
     const fullYoursWalletBackup: YoursWalletBackup = {
-      mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+      mnemonic:
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
       payPk: 'L1RrrnXkcKut5DEMwtDthjwRcTTwED36thyL1DebVrKuwvohjMNi',
       payDerivationPath: "m/44'/236'/0'/1/0",
       ordPk: 'L2RrrnXkcKut5DEMwtDthjwRcTTwED36thyL1DebVrKuwvohjMNi',
@@ -48,7 +49,7 @@ describe('YoursWallet Backup', () => {
       expect(typeof encrypted).toBe('string');
       expect(encrypted.length).toBeGreaterThan(0);
 
-      const decrypted = await decryptBackup(encrypted, passphrase) as YoursWalletBackup;
+      const decrypted = (await decryptBackup(encrypted, passphrase)) as YoursWalletBackup;
       // The createdAt field is added automatically if not present
       expect(decrypted.createdAt).toBeDefined();
       const { createdAt, ...decryptedWithoutTimestamp } = decrypted;
@@ -61,11 +62,12 @@ describe('YoursWallet Backup', () => {
       expect(typeof encrypted).toBe('string');
       expect(encrypted.length).toBeGreaterThan(0);
 
-      const decrypted = await decryptBackup(encrypted, passphrase) as YoursWalletBackup;
+      const decrypted = (await decryptBackup(encrypted, passphrase)) as YoursWalletBackup;
       // The createdAt field is added automatically if not present
       expect(decrypted.createdAt).toBeDefined();
       const { createdAt, ...decryptedWithoutTimestamp } = decrypted;
-      const { createdAt: originalCreatedAt, ...originalWithoutTimestamp } = minimalYoursWalletBackup;
+      const { createdAt: originalCreatedAt, ...originalWithoutTimestamp } =
+        minimalYoursWalletBackup;
       expect(decryptedWithoutTimestamp).toEqual(originalWithoutTimestamp);
     });
 
@@ -95,7 +97,7 @@ describe('YoursWallet Backup', () => {
       };
 
       const encrypted = await encryptBackup(backupWithoutIdentity, passphrase);
-      const decrypted = await decryptBackup(encrypted, passphrase) as YoursWalletBackup;
+      const decrypted = (await decryptBackup(encrypted, passphrase)) as YoursWalletBackup;
       // The createdAt field is added automatically if not present
       expect(decrypted.createdAt).toBeDefined();
       const { createdAt, ...decryptedWithoutTimestamp } = decrypted;
@@ -153,7 +155,7 @@ describe('YoursWallet Backup', () => {
       expect(typeof encrypted).toBe('string');
       expect(encrypted.length).toBeGreaterThan(0);
 
-      const decrypted = await decryptBackup(encrypted, passphrase) as YoursWalletZipBackup;
+      const decrypted = (await decryptBackup(encrypted, passphrase)) as YoursWalletZipBackup;
       // The createdAt field is added automatically if not present
       expect(decrypted.createdAt).toBeDefined();
       const { createdAt, ...decryptedWithoutTimestamp } = decrypted;
@@ -174,7 +176,8 @@ describe('YoursWallet Backup', () => {
 
       // YoursWalletBackup with mnemonic
       const yoursWalletWithMnemonic: YoursWalletBackup = {
-        mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+        mnemonic:
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
         payPk: 'L1RrrnXkcKut5DEMwtDthjwRcTTwED36thyL1DebVrKuwvohjMNi',
         ordPk: 'L2RrrnXkcKut5DEMwtDthjwRcTTwED36thyL1DebVrKuwvohjMNi',
         identityPk: 'L3RrrnXkcKut5DEMwtDthjwRcTTwED36thyL1DebVrKuwvohjMNi',

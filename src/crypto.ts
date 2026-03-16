@@ -1,7 +1,7 @@
 import { Utils } from '@bsv/sdk';
 import type {
-  BapMasterBackup,
   BapAccountBackup,
+  BapMasterBackup,
   DecryptedBackup,
   EncryptedBackup,
   OneSatBackup,
@@ -159,7 +159,9 @@ export async function decryptData(
           if (
             'payPk' in parsedJson &&
             'ordPk' in parsedJson &&
-            ('mnemonic' in parsedJson || 'payDerivationPath' in parsedJson || 'ordDerivationPath' in parsedJson)
+            ('mnemonic' in parsedJson ||
+              'payDerivationPath' in parsedJson ||
+              'ordDerivationPath' in parsedJson)
           )
             return parsedJson as YoursWalletBackup;
           // Check for YoursWalletZipBackup

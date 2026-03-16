@@ -132,6 +132,40 @@ bbackup upg --help
 ```
 *(Sample output or screenshots of `--help` could be added here for enhanced clarity).*
 
+### Touch ID Password Cache (macOS Apple Silicon)
+
+On supported hardware, `bbackup` can cache your passphrase in the Secure Enclave so you don't have to type it every time.
+
+**First decrypt -- password required, gets cached:**
+
+```
+bbackup dec wallet.bep -p "my-password" --touchid
+```
+
+**Every time after -- just Touch ID:**
+
+```
+bbackup dec wallet.bep --touchid
+```
+
+**Works with all commands:**
+
+```
+bbackup enc backup.json -p "my-password" --touchid -o wallet.bep
+bbackup dec wallet.bep --touchid
+bbackup upg old.bep --touchid
+bbackup forget wallet.bep
+```
+
+**Important:**
+
+- Cached passwords are hardware-bound to your Mac's Secure Enclave
+- The `.bep` file format is unchanged -- backups remain portable
+- Touch ID is a convenience layer, not a replacement for your passphrase
+- Without `--touchid`, all commands work exactly as before
+- Requires `@1sat/vault` package: `bun add @1sat/vault`
+- Requires macOS on Apple Silicon (arm64)
+
 ## Installation (Library)
 
 ```bash

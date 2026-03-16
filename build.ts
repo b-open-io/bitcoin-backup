@@ -6,14 +6,14 @@ import { generateLibraryDeclarations } from './scripts/generate-dts'
 const defaultLibraryConfig: BuildConfig = {
   entrypoints: ['./src/index.ts'],
   outdir: './dist',
-  external: ['@bsv/sdk'],
+  external: ['@bsv/sdk', '@1sat/vault'],
   target: 'node'
 }
 
 const cliConfig: BuildConfig = {
   entrypoints: ['./cli/bbackup.ts'],
   outdir: './dist/cli',
-  external: ['@bsv/sdk', 'commander'],
+  external: ['@bsv/sdk', 'commander', '@1sat/vault'],
   format: 'esm',
   target: 'node',
   naming: "[name].js"
