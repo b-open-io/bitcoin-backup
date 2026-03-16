@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -15,7 +15,7 @@ const program = new Command();
 program
   .name('bbackup')
   .description('CLI tool for managing and securing Bitcoin-related identity backups.')
-  .version('0.0.10');
+  .version('0.0.11');
 
 /**
  * Resolve a password from explicit flag, Touch ID cache, or error.

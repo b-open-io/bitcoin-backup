@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.0.10
+## 0.0.11
 
 ### Fixed
+- CLI shebang changed from `#!/usr/bin/env node` to `#!/usr/bin/env bun` -- fixes `@1sat/vault` dynamic import resolution and `Bun.CryptoHasher` availability
 - `@1sat/vault` moved from optional peer dep to regular dependency so Touch ID works out of the box on `bun install -g bitcoin-backup`
 
 ## 0.0.9

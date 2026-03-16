@@ -44,8 +44,8 @@ if (cliBuildResult.success) {
     if (path.basename(outputPath) === 'bbackup.js') {
       try {
         let content = await fs.readFile(outputPath, 'utf-8')
-        if (!content.startsWith('#!/usr/bin/env node')) {
-          content = `#!/usr/bin/env node\n${content}`
+        if (!content.startsWith('#!/usr/bin/env bun')) {
+          content = `#!/usr/bin/env bun\n${content}`
           await fs.writeFile(outputPath, content, 'utf-8')
           console.log(`Added shebang to ${outputPath}`)
         }
