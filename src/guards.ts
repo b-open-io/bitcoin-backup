@@ -1,7 +1,7 @@
 import type {
 	BapMasterBackup,
 	BapMasterBackupLegacy,
-	BapMemberBackup,
+	BapAccountBackup,
 	DecryptedBackup,
 	MasterBackupType42,
 	OneSatBackup,
@@ -39,11 +39,11 @@ export function isMasterBackup(
 }
 
 /**
- * Type guard: checks if the backup is a BAP member backup (wif + id).
+ * Type guard: checks if the backup is a BAP account backup (wif + id).
  */
-export function isMemberBackup(
+export function isAccountBackup(
 	backup: DecryptedBackup
-): backup is BapMemberBackup {
+): backup is BapAccountBackup {
 	return (
 		"wif" in backup &&
 		"id" in backup &&
@@ -114,7 +114,7 @@ export function isYoursWalletZipBackup(
 export type BackupTypeName =
 	| "Legacy"
 	| "Type42"
-	| "Member"
+	| "Account"
 	| "WIF"
 	| "OneSat"
 	| "Vault"
@@ -128,7 +128,7 @@ export type BackupTypeName =
 export function getBackupType(backup: DecryptedBackup): BackupTypeName {
 	if (isLegacyBackup(backup)) return "Legacy";
 	if (isType42Backup(backup)) return "Type42";
-	if (isMemberBackup(backup)) return "Member";
+	if (isAccountBackup(backup)) return "Account";
 	if (isWifBackup(backup)) return "WIF";
 	if (isOneSatBackup(backup)) return "OneSat";
 	if (isVaultBackup(backup)) return "Vault";

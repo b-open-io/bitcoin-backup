@@ -3,7 +3,7 @@ import type {
 	DecryptedBackup,
 	EncryptedBackup,
 	// BapMasterBackup, // Removed as it's covered by export *
-	// BapMemberBackup, // Removed as it's covered by export *
+	// BapAccountBackup, // Removed as it's covered by export *
 	// WifBackup        // Removed as it's covered by export *
 } from "./interfaces";
 
@@ -41,7 +41,7 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
 		return true;
 	}
 
-	// Check for BapMemberBackup structure
+	// Check for BapAccountBackup structure
 	if (
 		"wif" in p &&
 		typeof p.wif === "string" &&
@@ -55,7 +55,7 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
 	if (
 		"wif" in p &&
 		typeof p.wif === "string" &&
-		!("id" in p) && // Differentiates from BapMemberBackup
+		!("id" in p) && // Differentiates from BapAccountBackup
 		!("xprv" in p) && // Differentiates from BapMasterBackupLegacy
 		!("rootPk" in p) // Differentiates from MasterBackupType42
 	) {
@@ -118,7 +118,7 @@ export async function encryptBackup(
 ): Promise<EncryptedBackup> {
 	if (!isValidPayload(payload)) {
 		throw new Error(
-			"Invalid payload: Payload must be an object matching BapMasterBackup, BapMemberBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure."
+			"Invalid payload: Payload must be an object matching BapMasterBackup, BapAccountBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure."
 		);
 	}
 	if (typeof passphrase !== "string" || passphrase.length === 0) {

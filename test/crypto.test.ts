@@ -8,7 +8,7 @@ import {
 } from '../src/crypto';
 import type {
   BapMasterBackup,
-  BapMemberBackup,
+  BapAccountBackup,
   EncryptedBackup,
   OneSatBackup,
   WifBackup,
@@ -30,10 +30,10 @@ describe('Crypto Functions', () => {
     label: 'Test Master Wallet',
   };
 
-  const memberBackupPayload: BapMemberBackup = {
+  const accountBackupPayload: BapAccountBackup = {
     wif: 'L156TApxcSCDGQgXRNahKiivZ57ZavGHREy1df4p6PuaRvXE3a1D',
-    id: 'testMemberId',
-    label: 'Test Member Wallet',
+    id: 'testAccountId',
+    label: 'Test Account Wallet',
   };
 
   const wifBackupPayload: WifBackup = {
@@ -59,8 +59,8 @@ describe('Crypto Functions', () => {
       expect(encrypted.length).toBeGreaterThan(50); // Basic check for non-empty, encoded string
     });
 
-    it('should encrypt a BapMemberBackup payload successfully', async () => {
-      const encrypted = await encryptData(memberBackupPayload, passphrase);
+    it('should encrypt a BapAccountBackup payload successfully', async () => {
+      const encrypted = await encryptData(accountBackupPayload, passphrase);
       expect(typeof encrypted).toBe('string');
       expect(encrypted.length).toBeGreaterThan(50);
     });
@@ -146,13 +146,13 @@ describe('Crypto Functions', () => {
       expect(decrypted.createdAt).toBeDefined();
     });
 
-    it('should correctly decrypt an encrypted BapMemberBackup payload', async () => {
-      const encrypted = await encryptData(memberBackupPayload, passphrase);
-      const decrypted = (await decryptData(encrypted, passphrase)) as BapMemberBackup;
-      expect(decrypted.wif).toBe(memberBackupPayload.wif);
-      expect(decrypted.id).toBe(memberBackupPayload.id);
-      if (memberBackupPayload.label) {
-        expect(decrypted.label).toBe(memberBackupPayload.label);
+    it('should correctly decrypt an encrypted BapAccountBackup payload', async () => {
+      const encrypted = await encryptData(accountBackupPayload, passphrase);
+      const decrypted = (await decryptData(encrypted, passphrase)) as BapAccountBackup;
+      expect(decrypted.wif).toBe(accountBackupPayload.wif);
+      expect(decrypted.id).toBe(accountBackupPayload.id);
+      if (accountBackupPayload.label) {
+        expect(decrypted.label).toBe(accountBackupPayload.label);
       }
       expect(decrypted.createdAt).toBeDefined();
     });

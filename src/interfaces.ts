@@ -16,9 +16,9 @@ export interface MasterBackupType42 {
 // Main interface that users import - supports both legacy and Type 42 formats
 export type BapMasterBackup = BapMasterBackupLegacy | MasterBackupType42;
 
-export interface BapMemberBackup {
-  wif: string; // Private key in WIF format
-  id: string; // BAP ID or other identifier
+export interface BapAccountBackup {
+  wif: string; // Account private key in WIF format
+  id: string; // BAP ID for this account
   label?: string; // User-defined label (optional)
   createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if not provided)
 }
@@ -85,7 +85,7 @@ export interface YoursWalletZipBackup {
 
 export type DecryptedBackup =
   | BapMasterBackup
-  | BapMemberBackup
+  | BapAccountBackup
   | WifBackup
   | OneSatBackup
   | VaultBackup
