@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.13
+
+### Fixed
+- **Externalize `fflate` in the bundle** (build) — v0.0.12 inlined fflate's Node ESM, whose worker-pool path statically imports `createRequire` from `module`, breaking consumer browser/edge bundles (Turbopack: "Can't resolve 'module'"). `fflate` is now external like `@bsv/sdk`/`@1sat/vault`, so consumers resolve fflate's own browser-safe entry. (OPL-2516)
+
 ## 0.0.12
 
 ### Breaking Changes
