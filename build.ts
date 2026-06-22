@@ -6,7 +6,11 @@ import { generateLibraryDeclarations } from './scripts/generate-dts'
 const defaultLibraryConfig: BuildConfig = {
   entrypoints: ['./src/index.ts'],
   outdir: './dist',
-  external: ['@bsv/sdk', '@1sat/vault'],
+  // fflate must stay external: bundling it inlines fflate's Node ESM, which
+  // statically imports `createRequire` from "module" (its worker pool path).
+  // That breaks browser/edge bundlers (Turbopack: "Can't resolve 'module'").
+  // Externalized, consumers resolve fflate's own browser-safe entry instead.
+  external: ['@bsv/sdk', '@1sat/vault', 'fflate'],
   target: 'node'
 }
 
