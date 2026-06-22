@@ -6,10 +6,26 @@ import type {
   YoursWalletZipBackup,
 } from './interfaces';
 
+/** Per-account shape read out of Yours Wallet Chrome storage. */
+interface ChromeStorageAccount {
+  encryptedKeys?: unknown;
+  privateKeys?: { payPk?: string; ordPk?: string; identityPk?: string };
+  mnemonic?: string;
+  derivationPaths?: { pay?: string; ord?: string; identity?: string };
+}
+
+/** Minimal view of the Yours Wallet Chrome storage blob this helper reads. */
+interface ChromeStorageView {
+  selectedAccount?: string;
+  accounts?: Record<string, ChromeStorageAccount>;
+}
+
 /**
  * Extracts keys from Yours Wallet Chrome storage format
  */
-export function extractKeysFromChromeStorage(chromeStorage: any): YoursWalletBackup | null {
+export function extractKeysFromChromeStorage(
+  chromeStorage: ChromeStorageView
+): YoursWalletBackup | null {
   try {
     // Find the selected account
     const selectedAccount = chromeStorage.selectedAccount;
@@ -102,14 +118,14 @@ export function parseYoursWalletZip(zip: Uint8Array): YoursWalletZipBackup {
 /**
  * Type guard for YoursWalletBackup
  */
-export function isYoursWalletBackup(backup: any): backup is YoursWalletBackup {
+export function isYoursWalletBackup(backup: unknown): backup is YoursWalletBackup {
   return (
-    backup &&
     typeof backup === 'object' &&
+    backup !== null &&
     'payPk' in backup &&
-    typeof backup.payPk === 'string' &&
+    typeof (backup as Record<string, unknown>).payPk === 'string' &&
     'ordPk' in backup &&
-    typeof backup.ordPk === 'string' &&
+    typeof (backup as Record<string, unknown>).ordPk === 'string' &&
     // Must have at least one Yours-specific field to distinguish from OneSatBackup
     ('mnemonic' in backup || 'payDerivationPath' in backup || 'ordDerivationPath' in backup)
   );
@@ -119,12 +135,12 @@ export function isYoursWalletBackup(backup: any): backup is YoursWalletBackup {
  * Type guard for a parsed YoursWalletZipBackup.
  * The chromeStorage object is the discriminator; manifest/settings/chunks are optional.
  */
-export function isYoursWalletZipBackup(backup: any): backup is YoursWalletZipBackup {
+export function isYoursWalletZipBackup(backup: unknown): backup is YoursWalletZipBackup {
   return (
-    backup &&
     typeof backup === 'object' &&
+    backup !== null &&
     'chromeStorage' in backup &&
-    typeof backup.chromeStorage === 'object' &&
-    backup.chromeStorage !== null
+    typeof (backup as Record<string, unknown>).chromeStorage === 'object' &&
+    (backup as Record<string, unknown>).chromeStorage !== null
   );
 }

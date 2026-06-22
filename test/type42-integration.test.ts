@@ -14,9 +14,9 @@ describe('Type 42 Integration with BAP', () => {
     // 2. Create BAP instance with Type 42
     const bap = new BAP({ rootPk: masterWif });
 
-    // 3. Create identities
-    const id1 = bap.newId();
-    const id2 = bap.newId();
+    // 3. Create identities (two, to verify both round-trip)
+    bap.newId();
+    bap.newId();
 
     // 4. Export IDs and create Type 42 backup
     const encryptedIds = bap.exportIds();
