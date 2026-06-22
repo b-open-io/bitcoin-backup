@@ -85,8 +85,8 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
     return true;
   }
 
-  // Check for YoursWalletZipBackup structure
-  if ('chromeStorage' in p && typeof p.chromeStorage === 'object' && 'accountData' in p) {
+  // Check for YoursWalletZipBackup structure (parsed Yours Wallet ZIP)
+  if ('chromeStorage' in p && typeof p.chromeStorage === 'object' && p.chromeStorage !== null) {
     return true;
   }
 
@@ -156,3 +156,5 @@ export {
 export * from './guards';
 // Re-export interfaces for library consumers
 export * from './interfaces';
+// Re-export Yours Wallet helpers (guards live in ./guards to avoid duplicate exports)
+export { extractKeysFromChromeStorage, parseYoursWalletZip } from './yours-wallet';

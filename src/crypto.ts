@@ -164,8 +164,12 @@ export async function decryptData(
               'ordDerivationPath' in parsedJson)
           )
             return parsedJson as YoursWalletBackup;
-          // Check for YoursWalletZipBackup
-          if ('chromeStorage' in parsedJson && 'accountData' in parsedJson)
+          // Check for YoursWalletZipBackup (parsed Yours Wallet ZIP)
+          if (
+            'chromeStorage' in parsedJson &&
+            typeof parsedJson.chromeStorage === 'object' &&
+            parsedJson.chromeStorage !== null
+          )
             return parsedJson as YoursWalletZipBackup;
           if ('ordPk' in parsedJson && 'payPk' in parsedJson && 'identityPk' in parsedJson)
             return parsedJson as OneSatBackup;

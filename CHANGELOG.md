@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.12
+
+### Breaking Changes
+- **`@bsv/sdk` peer dependency tightened to `^2.0.0`** (was `^1.5.2 || ^2.0.0`). Only the long-stable `Utils.toArray`/`toBase64` helpers are used, but the supported/tested range is now v2.
+
+### Added
+- **Full Yours Wallet master backup ZIP parser** — `parseYoursWalletZip(zip: Uint8Array)` unzips (via `fflate`) and parses the real Yours Wallet backup format: `manifest.json` (v1/v2), `chromeStorage.json`, msgpack `settings.bin`, and per-account msgpack `chunk-XXXX.bin` files. Exported from the package root alongside `extractKeysFromChromeStorage`.
+- `YoursWalletZipBackup` interface rewritten to match the real format, with `YoursWalletBackupManifest` (v1/v2 union) and `YoursWalletBackupAccountEntry` types.
+
+### Changed
+- **Migrated to provider-based `@1sat/vault` (>=0.0.6 architecture).** Touch ID now uses `@1sat/vault` `^0.0.8` (platform-agnostic vault interface) plus `@1sat/wallet-mac` `^0.0.5` (`SecureEnclaveProvider`), wired via `createVault(provider, storage)`. `@1sat/wallet-mac` added to `trustedDependencies` so its Secure Enclave binary compiles on install.
+- Dependencies updated to latest: `typescript` 5.9 → 6.0, `commander` 14 → 15, `@biomejs/biome` → 2.5, `@bsv/sdk` → 2.1.6, `@types/bun` → 1.3.14. Added `fflate` and `@msgpack/msgpack`.
+- `tsconfig` `moduleResolution` `node` → `bundler` (the deprecated `node`/node10 value errors under TypeScript 6).
+
+### Fixed
+- Removed Node `Buffer` type usage (replaced with standard types) — resolves a TypeScript 6 build error and aligns with the project's no-`Buffer` convention.
+
 ## 0.0.11
 
 ### Fixed

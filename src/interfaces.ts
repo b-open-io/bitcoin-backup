@@ -71,14 +71,51 @@ export interface YoursWalletBackup {
   createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if not provided)
 }
 
+/** Per-account entry in a v2 (multi-account) Yours Wallet backup manifest. */
+export interface YoursWalletBackupAccountEntry {
+  identityKey: string; // Account identity public key
+  identityAddress: string; // Account identity address (ZIP folder prefix for this account's chunks)
+  name: string; // User-facing account name
+  chunkCount: number; // Number of wallet-toolbox sync chunks for this account
+}
+
+/** v1 (single-account) Yours Wallet / wallet-toolbox backup manifest. */
+export interface YoursWalletBackupManifestV1 {
+  version: 1;
+  createdAt: string; // ISO 8601 timestamp
+  chain: 'main' | 'test';
+  identityKey: string; // Wallet identity public key
+  chunkCount: number; // Number of sync chunks in the backup
+}
+
+/** v2 (multi-account) Yours Wallet backup manifest. */
+export interface YoursWalletBackupManifestV2 {
+  version: 2;
+  createdAt: string; // ISO 8601 timestamp
+  chain: 'main' | 'test';
+  accounts: YoursWalletBackupAccountEntry[]; // Per-account metadata
+}
+
 /**
- * YoursWallet ZIP backup format - contains the full Yours Wallet export
+ * Parsed manifest.json from a Yours Wallet master backup ZIP. Legacy
+ * (pre-BRC-100, keys-only) backups have no manifest at all.
+ */
+export type YoursWalletBackupManifest = YoursWalletBackupManifestV1 | YoursWalletBackupManifestV2;
+
+/**
+ * Parsed contents of a Yours Wallet master backup ZIP (produced by parseYoursWalletZip).
+ *
+ * The on-disk ZIP (fflate, deflate) contains:
+ *   - manifest.json        — v1/v2 manifest (absent for legacy keys-only backups)
+ *   - chromeStorage.json   — accounts (with encrypted keys), selectedAccount, salt, settings
+ *   - settings.bin         — msgpack-encoded wallet-toolbox storage settings (v1/v2)
+ *   - chunk-XXXX.bin        — msgpack-encoded sync chunks (v1: flat; v2: under <identityAddress>/)
  */
 export interface YoursWalletZipBackup {
-  chromeStorage: any; // Chrome storage JSON with accounts, settings, etc.
-  accountData: any; // Account-specific transaction data
-  blocks?: Buffer[]; // SPV block headers (optional)
-  txns?: Buffer[]; // Transaction data (optional)
+  chromeStorage: Record<string, unknown>; // Parsed chromeStorage.json (required)
+  manifest?: YoursWalletBackupManifest; // Parsed manifest.json (absent for legacy backups)
+  settings?: unknown; // Decoded settings.bin (msgpack), present for v1/v2 backups
+  chunks?: Record<string, unknown>; // Decoded sync chunks (msgpack), keyed by ZIP entry name
   label?: string; // User-defined label (optional)
   createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if not provided)
 }

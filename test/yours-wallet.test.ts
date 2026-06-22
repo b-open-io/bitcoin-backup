@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import { decryptBackup, encryptBackup } from '../src/index';
+import { encode as encodeMsgpack } from '@msgpack/msgpack';
+import { strToU8, zipSync } from 'fflate';
+import { decryptBackup, encryptBackup, parseYoursWalletZip } from '../src/index';
 import type { OneSatBackup, YoursWalletBackup, YoursWalletZipBackup } from '../src/interfaces';
 import { isYoursWalletBackup, isYoursWalletZipBackup } from '../src/yours-wallet';
 
@@ -106,61 +108,85 @@ describe('YoursWallet Backup', () => {
   });
 
   describe('YoursWalletZipBackup', () => {
-    const validZipBackup: YoursWalletZipBackup = {
-      chromeStorage: {
-        accounts: {
-          '1FdKLZsksDDRukRtUSwv8b2TVXEngdDHya': {
-            addresses: {
-              bsvAddress: '1Cr5gSHf5tzFBvGuSa21VRoV9pRuRBmum9',
-              identityAddress: '1FdKLZsksDDRukRtUSwv8b2TVXEngdDHya',
-              ordAddress: '1EkeEuz1ZHqzD2Q8sueRjziBpf59KbNoMC',
-            },
-            balance: { bsv: 0.85307057, satoshis: 85307057, usdInCents: 6074 },
-            encryptedKeys: 'encrypted_keys_here',
-            settings: {
-              isPasswordRequired: true,
-              noApprovalLimit: 0.01,
-            },
+    const identityAddress = '1FdKLZsksDDRukRtUSwv8b2TVXEngdDHya';
+    const chromeStorage = {
+      accounts: {
+        [identityAddress]: {
+          addresses: {
+            bsvAddress: '1Cr5gSHf5tzFBvGuSa21VRoV9pRuRBmum9',
+            identityAddress,
+            ordAddress: '1EkeEuz1ZHqzD2Q8sueRjziBpf59KbNoMC',
           },
+          encryptedKeys: 'encrypted_keys_here',
         },
-        selectedAccount: '1FdKLZsksDDRukRtUSwv8b2TVXEngdDHya',
-        version: 1,
       },
-      accountData: [
-        {
-          txid: '657f89f2f538a9c1bb4e6637dc0aa4d4587a57fb6c80c60530d0e463fccb64db',
-          height: 737660,
-          idx: 7783,
-          outputs: [4],
-          parseMode: 2,
-        },
-      ],
-      label: 'Yours Wallet Full Backup',
+      selectedAccount: identityAddress,
+      salt: 'abc123',
+      version: 1,
     };
+    // A msgpack-decodable sync chunk uses plain JSON-safe values so it also
+    // survives a JSON encrypt/decrypt round-trip.
+    const syncChunk = { provenTxs: [], transactions: [{ txid: 'deadbeef', height: 737660 }] };
+    const storageSettings = { storageIdentityKey: '02abc', chain: 'main' };
 
-    it('should validate a valid YoursWalletZipBackup', () => {
-      expect(isYoursWalletZipBackup(validZipBackup)).toBe(true);
-    });
-
-    it('should reject invalid YoursWalletZipBackup', () => {
-      const invalidBackup = {
-        chromeStorage: 'not an object',
-        // Missing accountData
+    /** Build a real v2 Yours Wallet backup ZIP the same way the wallet does. */
+    function buildV2Zip(): Uint8Array {
+      const manifest = {
+        version: 2,
+        createdAt: new Date().toISOString(),
+        chain: 'main',
+        accounts: [{ identityKey: '02abc', identityAddress, name: 'Account 1', chunkCount: 1 }],
       };
-      expect(isYoursWalletZipBackup(invalidBackup)).toBe(false);
+      return zipSync({
+        'manifest.json': strToU8(JSON.stringify(manifest)),
+        'chromeStorage.json': strToU8(JSON.stringify(chromeStorage)),
+        'settings.bin': encodeMsgpack(storageSettings),
+        [`${identityAddress}/chunk-0000.bin`]: encodeMsgpack(syncChunk),
+      });
+    }
+
+    it('parses a v2 (multi-account) backup ZIP', () => {
+      const parsed = parseYoursWalletZip(buildV2Zip());
+      expect(parsed.manifest?.version).toBe(2);
+      expect(parsed.chromeStorage.selectedAccount).toBe(identityAddress);
+      expect(parsed.settings).toEqual(storageSettings);
+      expect(parsed.chunks?.[`${identityAddress}/chunk-0000.bin`]).toEqual(syncChunk);
     });
 
-    it('should encrypt and decrypt YoursWalletZipBackup', async () => {
-      const encrypted = await encryptBackup(validZipBackup, passphrase);
+    it('parses a legacy (keys-only) backup with no manifest', () => {
+      const zip = zipSync({ 'chromeStorage.json': strToU8(JSON.stringify(chromeStorage)) });
+      const parsed = parseYoursWalletZip(zip);
+      expect(parsed.manifest).toBeUndefined();
+      expect(parsed.settings).toBeUndefined();
+      expect(parsed.chunks).toBeUndefined();
+      expect(parsed.chromeStorage.selectedAccount).toBe(identityAddress);
+    });
+
+    it('throws when chromeStorage.json is missing', () => {
+      const zip = zipSync({ 'manifest.json': strToU8('{"version":2}') });
+      expect(() => parseYoursWalletZip(zip)).toThrow('missing chromeStorage.json');
+    });
+
+    it('validates a parsed ZIP backup with the type guard', () => {
+      const parsed = parseYoursWalletZip(buildV2Zip());
+      expect(isYoursWalletZipBackup(parsed)).toBe(true);
+    });
+
+    it('rejects a non-object chromeStorage with the type guard', () => {
+      expect(isYoursWalletZipBackup({ chromeStorage: 'not an object' } as never)).toBe(false);
+    });
+
+    it('encrypts and decrypts a parsed ZIP backup', async () => {
+      const parsed = parseYoursWalletZip(buildV2Zip());
+      parsed.label = 'Yours Wallet Full Backup';
+
+      const encrypted = await encryptBackup(parsed, passphrase);
       expect(typeof encrypted).toBe('string');
-      expect(encrypted.length).toBeGreaterThan(0);
 
       const decrypted = (await decryptBackup(encrypted, passphrase)) as YoursWalletZipBackup;
-      // The createdAt field is added automatically if not present
       expect(decrypted.createdAt).toBeDefined();
       const { createdAt, ...decryptedWithoutTimestamp } = decrypted;
-      const { createdAt: originalCreatedAt, ...originalWithoutTimestamp } = validZipBackup;
-      expect(decryptedWithoutTimestamp).toEqual(originalWithoutTimestamp);
+      expect(decryptedWithoutTimestamp).toEqual(parsed);
     });
   });
 

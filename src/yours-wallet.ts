@@ -1,4 +1,10 @@
-import type { YoursWalletBackup, YoursWalletZipBackup } from './interfaces';
+import { decode as decodeMsgpack } from '@msgpack/msgpack';
+import { unzipSync } from 'fflate';
+import type {
+  YoursWalletBackup,
+  YoursWalletBackupManifest,
+  YoursWalletZipBackup,
+} from './interfaces';
 
 /**
  * Extracts keys from Yours Wallet Chrome storage format
@@ -40,16 +46,57 @@ export function extractKeysFromChromeStorage(chromeStorage: any): YoursWalletBac
   }
 }
 
+/** True for ZIP entries holding a msgpack-encoded wallet-toolbox sync chunk. */
+function isChunkEntry(name: string): boolean {
+  return name.includes('chunk-') && name.endsWith('.bin');
+}
+
 /**
- * Parses a YoursWallet ZIP backup file
- * Note: This requires the 'unzipper' or similar package to handle ZIP files
+ * Parses a Yours Wallet master backup ZIP into its structured contents.
+ *
+ * The ZIP (fflate/deflate) holds chromeStorage.json (required), an optional
+ * manifest.json (absent for legacy keys-only backups), an optional
+ * msgpack-encoded settings.bin, and msgpack-encoded sync chunks. JSON entries
+ * are parsed; binary (.bin) entries are msgpack-decoded.
+ *
+ * @param zip Raw ZIP bytes (e.g. from `await file.arrayBuffer()` wrapped in a Uint8Array).
+ * @returns The parsed backup contents.
+ * @throws If the ZIP cannot be decompressed or is missing chromeStorage.json.
  */
-export async function parseYoursWalletZip(zipBuffer: Buffer): Promise<YoursWalletZipBackup> {
-  // This would need an unzip library like 'unzipper' or 'node-stream-zip'
-  // For now, we'll just document the expected structure
-  throw new Error(
-    'ZIP parsing not yet implemented. Use unzip command line tool to extract and process files individually.'
-  );
+export function parseYoursWalletZip(zip: Uint8Array): YoursWalletZipBackup {
+  const entries = unzipSync(zip);
+  const decoder = new TextDecoder();
+
+  const chromeStorageRaw = entries['chromeStorage.json'];
+  if (!chromeStorageRaw) {
+    throw new Error('Invalid Yours Wallet backup: missing chromeStorage.json');
+  }
+
+  const backup: YoursWalletZipBackup = {
+    chromeStorage: JSON.parse(decoder.decode(chromeStorageRaw)) as Record<string, unknown>,
+  };
+
+  const manifestRaw = entries['manifest.json'];
+  if (manifestRaw) {
+    backup.manifest = JSON.parse(decoder.decode(manifestRaw)) as YoursWalletBackupManifest;
+  }
+
+  const settingsRaw = entries['settings.bin'];
+  if (settingsRaw) {
+    backup.settings = decodeMsgpack(settingsRaw);
+  }
+
+  const chunks: Record<string, unknown> = {};
+  for (const name of Object.keys(entries)) {
+    if (isChunkEntry(name)) {
+      chunks[name] = decodeMsgpack(entries[name]);
+    }
+  }
+  if (Object.keys(chunks).length > 0) {
+    backup.chunks = chunks;
+  }
+
+  return backup;
 }
 
 /**
@@ -69,7 +116,8 @@ export function isYoursWalletBackup(backup: any): backup is YoursWalletBackup {
 }
 
 /**
- * Type guard for YoursWalletZipBackup
+ * Type guard for a parsed YoursWalletZipBackup.
+ * The chromeStorage object is the discriminator; manifest/settings/chunks are optional.
  */
 export function isYoursWalletZipBackup(backup: any): backup is YoursWalletZipBackup {
   return (
@@ -77,6 +125,6 @@ export function isYoursWalletZipBackup(backup: any): backup is YoursWalletZipBac
     typeof backup === 'object' &&
     'chromeStorage' in backup &&
     typeof backup.chromeStorage === 'object' &&
-    'accountData' in backup
+    backup.chromeStorage !== null
   );
 }

@@ -78,10 +78,15 @@ export function isYoursWalletBackup(backup: DecryptedBackup): backup is YoursWal
 }
 
 /**
- * Type guard: checks if the backup is a Yours Wallet ZIP backup.
+ * Type guard: checks if the backup is a parsed Yours Wallet ZIP backup.
+ * The chromeStorage object is the discriminator; manifest/settings/chunks are optional.
  */
 export function isYoursWalletZipBackup(backup: DecryptedBackup): backup is YoursWalletZipBackup {
-  return 'chromeStorage' in backup && 'accountData' in backup;
+  return (
+    'chromeStorage' in backup &&
+    typeof (backup as { chromeStorage: unknown }).chromeStorage === 'object' &&
+    (backup as { chromeStorage: unknown }).chromeStorage !== null
+  );
 }
 
 /** Backup type name for display/logging purposes */
