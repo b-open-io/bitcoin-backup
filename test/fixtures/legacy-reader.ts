@@ -1,3 +1,4 @@
+// Frozen pre-seed reader from bitcoin-backup e443e02, retained for compatibility tests.
 import { Utils } from '@bsv/sdk';
 import type {
   BapAccountBackup,
@@ -9,8 +10,7 @@ import type {
   WifBackup,
   YoursWalletBackup,
   YoursWalletZipBackup,
-} from './interfaces';
-import { hasSigmaSeedMarker, isSigmaSeedBackup } from './seed';
+} from '../../src/interfaces';
 
 const { toArray, toBase64 } = Utils;
 
@@ -70,28 +70,19 @@ export async function encryptData(
   passphrase: string,
   iterations?: number // Optional iterations for encryption
 ): Promise<EncryptedBackup> {
-  if (
-    hasSigmaSeedMarker(payload as unknown as Record<string, unknown>) &&
-    !isSigmaSeedBackup(payload)
-  ) {
-    throw new Error('Invalid Sigma seed backup structure.');
-  }
   const salt = globalThis.crypto.getRandomValues(new Uint8Array(SALT_LENGTH_BYTES));
   const iv = globalThis.crypto.getRandomValues(new Uint8Array(IV_LENGTH_BYTES));
 
+  // deriveKey will use its default (DEFAULT_PBKDF2_ITERATIONS) if iterations is undefined
+  const key = await deriveKey(passphrase, salt, iterations);
+
   const payloadToEncrypt = {
     ...payload,
-    createdAt: isSigmaSeedBackup(payload)
-      ? payload.createdAt
-      : payload.createdAt || new Date().toISOString(),
+    createdAt: payload.createdAt || new Date().toISOString(),
   };
 
   const jsonPayload = JSON.stringify(payloadToEncrypt);
   const dataToEncrypt = new TextEncoder().encode(jsonPayload);
-
-  // Snapshot the validated payload before key derivation yields to the caller.
-  // deriveKey will use its default (DEFAULT_PBKDF2_ITERATIONS) if iterations is undefined
-  const key = await deriveKey(passphrase, salt, iterations);
 
   const encryptedContent = await globalThis.crypto.subtle.encrypt(
     { name: 'AES-GCM', iv: iv },
@@ -161,11 +152,6 @@ export async function decryptData(
       try {
         const parsedJson = JSON.parse(decryptedString);
         if (typeof parsedJson === 'object' && parsedJson !== null) {
-          if (hasSigmaSeedMarker(parsedJson)) {
-            if (!isSigmaSeedBackup(parsedJson))
-              throw new Error('Invalid Sigma seed backup structure.');
-            return parsedJson;
-          }
           if ('xprv' in parsedJson && 'ids' in parsedJson && 'mnemonic' in parsedJson)
             return parsedJson as BapMasterBackup;
           if ('rootPk' in parsedJson && 'ids' in parsedJson) return parsedJson as BapMasterBackup;

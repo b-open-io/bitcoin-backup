@@ -122,7 +122,7 @@ npx bbackup --help
 **Common Options:**
 *   `-p, --password <password>`: (Required) The passphrase for encryption/decryption.
 *   `-o, --output <outputFile>`: (Optional) Path for the output file. Defaults are sensible (e.g., `<input>.bep` for encrypt, `<input>.json` for decrypt).
-*   `-t, --iterations <iterations>`: (Optional, for `enc` command) Number of PBKDF2 iterations.
+*   `-t, --iterations <iterations>`: (Optional) PBKDF2 iterations: output count for `enc`, input count for `dec` and `upg`. Without it, readers try 600,000 then 100,000. `upg` always writes 600,000. Custom counts must be supplied when reading those files.
 
 For detailed options for each command, run:
 ```bash
@@ -307,10 +307,10 @@ const derivedKey = alice.deriveChild(bobPub, invoiceNumber);
 
 ```bash
 # Encrypt a backup file
-bbackup encrypt input.json -p "passphrase" -o encrypted.backup
+bbackup enc input.json -p "passphrase" -o encrypted.backup
 
 # Decrypt a backup file  
-bbackup decrypt encrypted.backup -p "passphrase" -o decrypted.json
+bbackup dec encrypted.backup -p "passphrase" -o decrypted.json
 ```
 
 ## Security Features
@@ -343,3 +343,67 @@ To migrate from legacy to Type 42 format:
 2. **Choose a key name**: Select a meaningful identifier for your master key
 3. **Create new backup**: Use `BapMasterBackup` interface
 4. **Test thoroughly**: Verify encryption/decryption works as expected
+
+## Sigma Peer Profiles seed backups
+
+`SigmaSeedBackup` is a separate member of `DecryptedBackup`, never a
+`BapMasterBackup`. Use `isSigmaSeedBackup(value)` to validate its structure;
+`getBackupType` returns `SigmaSeed`. Existing encryption and legacy key formats
+are unchanged. Older readers reject this envelope as an unknown JSON structure.
+
+```ts
+const backup: SigmaSeedBackup = {
+  format: 'sigma-seed',
+  version: 1,
+  mnemonic,
+  profiles: [{ index: 0, bapId }],
+  nextProfileIndex: 1,
+  createdAt: Date.now(),
+};
+const ciphertext = await encryptBackup(backup, backupPassword);
+```
+
+Version 1 permanently defines BRC157 peer profiles and an empty BIP39 passphrase; `backupPassword` protects the encrypted
+file and is independent of that policy. Profiles are hardened peers at
+`m/0'/N'`, where `N` is the profile index. Optional profile `metadata` must be a
+JSON object, and the envelope supports an optional string `label`.
+
+Validation requires version 1, 12/15/18/21/24 mnemonic word counts, a nonempty profile list,
+unique indices and BAP
+IDs, and a safe integer `nextProfileIndex` greater than every used index. All
+profile indices are in 0–2147483647; `nextProfileIndex` may be 2147483648
+to record exhaustion, at which point allocation must stop. `createdAt` is a
+nonnegative safe integer timestamp in milliseconds.
+The mnemonic word count encodes its entropy length; redundant `scheme`,
+`entropyBytes`, and `passphrasePolicy` fields are rejected as unknown.
+Unknown fields and mixed legacy discriminators (including top-level `rootPk`,
+`xprv`, `wif`, or `ids`) are rejected. Numeric timestamps are preserved, including
+zero. Legacy formats retain their existing ISO timestamp behavior.
+
+This package checks structure and word count only. The Sigma seed module must
+verify the mnemonic checksum, derive keys, and verify BAP ID bindings before
+using a restored seed. This format does not migrate or rekey existing accounts.
+
+The optional `inventoryComplete: false` marks phrase-only recovery with an unknown full profile inventory. Absence means complete; `true` and other values are invalid. For partial inventories, `nextProfileIndex` is only a structural bound over listed profiles, not proof that the next index is unused. Consumers must reconcile a complete backup before appending or deleting profiles or replacing a complete cloud inventory.
+
+### Seed backups in the CLI
+
+The same `enc`, `dec`, and `upg` commands accept complete and partial Sigma seed
+backups. Format detection is automatic; no conversion flag is needed. Profile
+indices, metadata, labels, numeric timestamps, and `inventoryComplete: false`
+are preserved. `upg` changes encryption strength only; it never completes an
+inventory or derives keys. Unknown versions, removed fields, and mixed legacy
+markers fail without writing an output file.
+
+`dec -o backup.json` writes plaintext with owner-only permissions (0600),
+including when overwriting an existing file. Without `-o`, `dec` deliberately
+prints the entire decrypted backup, including mnemonic/private keys, to stdout.
+Passwords passed with `-p` may appear in shell history and process arguments;
+Touch ID can retrieve an already cached password on supported Macs.
+
+The CLI validates structure and supported mnemonic word count only. It does not
+verify BIP39 checksum, derive or bind BAP IDs, generate seeds, or discover
+profiles. Use a compatible Sigma application for those operations. An absent
+`inventoryComplete` marker describes the inventory recorded when that backup
+was saved; it does not prove no profiles were created later. Upgrading an old
+backup does not discover or add those later profiles.

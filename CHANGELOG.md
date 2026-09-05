@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.14
+
+### Fixed
+- Snapshot validated backup data before asynchronous encryption so caller mutation cannot change the encrypted inventory.
+- Keep CLI version synchronized with the package. Read custom PBKDF2 iteration counts in `dec` and `upg`, reject malformed counts, protect decrypted files with owner-only permissions, and avoid echoing malformed input JSON in errors.
+
+### Added
+- Versioned Sigma seed backup envelopes, structural validation, and encrypted profile inventories, including partial-inventory tracking for phrase recovery.
+
+### Changed
+- Version 1 defines the derivation and empty passphrase policy; mnemonic word count determines entropy length. Existing backup formats remain unchanged.
+- Pin the integration suite to the published `bsv-bap` package instead of an undeclared sibling checkout.
+
 ## 0.0.13
 
 ### Fixed

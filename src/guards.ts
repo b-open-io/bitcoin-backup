@@ -1,3 +1,7 @@
+import { hasSigmaSeedMarker, isSigmaSeedBackup } from './seed';
+
+export { isSigmaSeedBackup } from './seed';
+
 import type {
   BapAccountBackup,
   BapMasterBackup,
@@ -15,6 +19,7 @@ import type {
  * Type guard: checks if the backup is a legacy BAP master backup (xprv + mnemonic).
  */
 export function isLegacyBackup(backup: DecryptedBackup): backup is BapMasterBackupLegacy {
+  if (hasSigmaSeedMarker(backup)) return false;
   return 'xprv' in backup && 'mnemonic' in backup && 'ids' in backup;
 }
 
@@ -22,6 +27,7 @@ export function isLegacyBackup(backup: DecryptedBackup): backup is BapMasterBack
  * Type guard: checks if the backup is a Type 42 BAP master backup (rootPk).
  */
 export function isType42Backup(backup: DecryptedBackup): backup is MasterBackupType42 {
+  if (hasSigmaSeedMarker(backup)) return false;
   return 'rootPk' in backup && 'ids' in backup && !('xprv' in backup);
 }
 
@@ -36,6 +42,7 @@ export function isMasterBackup(backup: DecryptedBackup): backup is BapMasterBack
  * Type guard: checks if the backup is a BAP account backup (wif + id).
  */
 export function isAccountBackup(backup: DecryptedBackup): backup is BapAccountBackup {
+  if (hasSigmaSeedMarker(backup)) return false;
   return 'wif' in backup && 'id' in backup && !('xprv' in backup) && !('rootPk' in backup);
 }
 
@@ -43,6 +50,7 @@ export function isAccountBackup(backup: DecryptedBackup): backup is BapAccountBa
  * Type guard: checks if the backup is a bare WIF backup (wif only, no id/xprv/rootPk).
  */
 export function isWifBackup(backup: DecryptedBackup): backup is WifBackup {
+  if (hasSigmaSeedMarker(backup)) return false;
   return 'wif' in backup && !('id' in backup) && !('xprv' in backup) && !('rootPk' in backup);
 }
 
@@ -50,6 +58,7 @@ export function isWifBackup(backup: DecryptedBackup): backup is WifBackup {
  * Type guard: checks if the backup is a 1Sat Ordinals backup.
  */
 export function isOneSatBackup(backup: DecryptedBackup): backup is OneSatBackup {
+  if (hasSigmaSeedMarker(backup)) return false;
   return (
     'ordPk' in backup &&
     'payPk' in backup &&
@@ -63,6 +72,7 @@ export function isOneSatBackup(backup: DecryptedBackup): backup is OneSatBackup 
  * Type guard: checks if the backup is an encrypted vault backup.
  */
 export function isVaultBackup(backup: DecryptedBackup): backup is VaultBackup {
+  if (hasSigmaSeedMarker(backup)) return false;
   return 'encryptedVault' in backup;
 }
 
@@ -70,6 +80,7 @@ export function isVaultBackup(backup: DecryptedBackup): backup is VaultBackup {
  * Type guard: checks if the backup is a Yours Wallet JSON backup.
  */
 export function isYoursWalletBackup(backup: DecryptedBackup): backup is YoursWalletBackup {
+  if (hasSigmaSeedMarker(backup)) return false;
   return (
     'payPk' in backup &&
     'ordPk' in backup &&
@@ -82,6 +93,7 @@ export function isYoursWalletBackup(backup: DecryptedBackup): backup is YoursWal
  * The chromeStorage object is the discriminator; manifest/settings/chunks are optional.
  */
 export function isYoursWalletZipBackup(backup: DecryptedBackup): backup is YoursWalletZipBackup {
+  if (hasSigmaSeedMarker(backup)) return false;
   return (
     'chromeStorage' in backup &&
     typeof (backup as { chromeStorage: unknown }).chromeStorage === 'object' &&
@@ -91,6 +103,7 @@ export function isYoursWalletZipBackup(backup: DecryptedBackup): backup is Yours
 
 /** Backup type name for display/logging purposes */
 export type BackupTypeName =
+  | 'SigmaSeed'
   | 'Legacy'
   | 'Type42'
   | 'Account'
@@ -105,6 +118,7 @@ export type BackupTypeName =
  * Returns a human-readable name for the backup type.
  */
 export function getBackupType(backup: DecryptedBackup): BackupTypeName {
+  if (isSigmaSeedBackup(backup)) return 'SigmaSeed';
   if (isLegacyBackup(backup)) return 'Legacy';
   if (isType42Backup(backup)) return 'Type42';
   if (isAccountBackup(backup)) return 'Account';
