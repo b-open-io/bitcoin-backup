@@ -18,11 +18,8 @@ import { decryptData as legacyDecrypt } from './fixtures/legacy-reader';
 const seed: SigmaSeedBackup = {
   format: 'sigma-seed',
   version: 1,
-  scheme: 'brc157-peer-profiles',
   mnemonic:
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-  entropyBytes: 16,
-  passphrasePolicy: 'empty',
   profiles: [
     {
       index: 0,
@@ -94,15 +91,12 @@ describe('Sigma seed envelope', () => {
     expect(getBackupType(restored)).toBe('SigmaSeed');
   });
 
-  it('supports all entropy word counts and hardened peer indices', () => {
-    for (const entropyBytes of [16, 20, 24, 28, 32]) {
+  it('supports all mnemonic word counts and hardened peer indices', () => {
+    for (const wordCount of [12, 15, 18, 21, 24]) {
       expect(
         isSigmaSeedBackup({
           ...seed,
-          entropyBytes,
-          mnemonic: Array((entropyBytes * 3) / 4)
-            .fill('abandon')
-            .join(' '),
+          mnemonic: Array(wordCount).fill('abandon').join(' '),
         })
       ).toBe(true);
     }
@@ -128,6 +122,9 @@ describe('Sigma seed envelope', () => {
     { ...seed, version: 2 },
     { ...seed, format: 'future-seed' },
     { ...seed, scheme: 'unknown' },
+    { ...seed, scheme: 'brc157-peer-profiles' },
+    { ...seed, passphrasePolicy: 'empty' },
+    { ...seed, entropyBytes: 16 },
     { ...seed, passphrasePolicy: 'optional' },
     { ...seed, rootPk: 'legacy-root', ids: 'legacy-ids' },
     { ...seed, xprv: 'legacy-root', ids: 'legacy-ids' },

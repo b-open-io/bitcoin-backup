@@ -132,11 +132,9 @@ export type SigmaSeedJsonValue =
 /** Explicit seed format. Legacy master-key consumers must never receive this as BapMasterBackup. */
 export interface SigmaSeedBackup {
   format: 'sigma-seed';
+  /** Version 1 fixes BRC157 peers at m/0'/i' and an empty BIP39 passphrase. */
   version: 1;
-  scheme: 'brc157-peer-profiles';
   mnemonic: string;
-  entropyBytes: 16 | 20 | 24 | 28 | 32;
-  passphrasePolicy: 'empty';
   profiles: { index: number; bapId: string; metadata?: { [key: string]: SigmaSeedJsonValue } }[];
   nextProfileIndex: number;
   /** Absent means complete; false marks phrase-only recovery with unknown inventory. */

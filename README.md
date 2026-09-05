@@ -355,10 +355,7 @@ are unchanged. Older readers reject this envelope as an unknown JSON structure.
 const backup: SigmaSeedBackup = {
   format: 'sigma-seed',
   version: 1,
-  scheme: 'brc157-peer-profiles',
   mnemonic,
-  entropyBytes: 16,
-  passphrasePolicy: 'empty',
   profiles: [{ index: 0, bapId }],
   nextProfileIndex: 1,
   createdAt: Date.now(),
@@ -366,18 +363,19 @@ const backup: SigmaSeedBackup = {
 const ciphertext = await encryptBackup(backup, backupPassword);
 ```
 
-The seed uses an empty BIP39 passphrase; `backupPassword` protects the encrypted
+Version 1 permanently defines BRC157 peer profiles and an empty BIP39 passphrase; `backupPassword` protects the encrypted
 file and is independent of that policy. Profiles are hardened peers at
 `m/0'/N'`, where `N` is the profile index. Optional profile `metadata` must be a
 JSON object, and the envelope supports an optional string `label`.
 
-Validation requires version 1, the exact scheme, entropy sizes 16/20/24/28/32
-bytes with matching 12/15/18/21/24 mnemonic word counts, a nonempty profile list,
+Validation requires version 1, 12/15/18/21/24 mnemonic word counts, a nonempty profile list,
 unique indices and BAP
 IDs, and a safe integer `nextProfileIndex` greater than every used index. All
 profile indices are in 0–2147483647; `nextProfileIndex` may be 2147483648
 to record exhaustion, at which point allocation must stop. `createdAt` is a
 nonnegative safe integer timestamp in milliseconds.
+The mnemonic word count encodes its entropy length; redundant `scheme`,
+`entropyBytes`, and `passphrasePolicy` fields are rejected as unknown.
 Unknown fields and mixed legacy discriminators (including top-level `rootPk`,
 `xprv`, `wif`, or `ids`) are rejected. Numeric timestamps are preserved, including
 zero. Legacy formats retain their existing ISO timestamp behavior.

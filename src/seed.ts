@@ -4,10 +4,7 @@ const MAX_INDEX = 2147483647;
 const fields = new Set([
   'format',
   'version',
-  'scheme',
   'mnemonic',
-  'entropyBytes',
-  'passphrasePolicy',
   'profiles',
   'nextProfileIndex',
   'inventoryComplete',
@@ -67,19 +64,11 @@ export function hasSigmaSeedMarker(value: object): boolean {
 /** Structural validation only; mnemonic checksum and BAP/key binding belong to the Sigma seed module. */
 export function isSigmaSeedBackup(value: unknown): value is SigmaSeedBackup {
   if (!object(value) || Object.keys(value).some((key) => !fields.has(key))) return false;
-  if (
-    value.format !== 'sigma-seed' ||
-    value.version !== 1 ||
-    value.scheme !== 'brc157-peer-profiles' ||
-    value.passphrasePolicy !== 'empty'
-  )
-    return false;
-  if (typeof value.entropyBytes !== 'number' || ![16, 20, 24, 28, 32].includes(value.entropyBytes))
-    return false;
+  if (value.format !== 'sigma-seed' || value.version !== 1) return false;
   if (
     typeof value.mnemonic !== 'string' ||
     value.mnemonic.trim() !== value.mnemonic ||
-    value.mnemonic.split(/\s+/u).length !== (value.entropyBytes * 3) / 4
+    ![12, 15, 18, 21, 24].includes(value.mnemonic.split(/\s+/u).length)
   )
     return false;
   if (
