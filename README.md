@@ -122,7 +122,7 @@ npx bbackup --help
 **Common Options:**
 *   `-p, --password <password>`: (Required) The passphrase for encryption/decryption.
 *   `-o, --output <outputFile>`: (Optional) Path for the output file. Defaults are sensible (e.g., `<input>.bep` for encrypt, `<input>.json` for decrypt).
-*   `-t, --iterations <iterations>`: (Optional, for `enc` command) Number of PBKDF2 iterations.
+*   `-t, --iterations <iterations>`: (Optional) PBKDF2 iterations: output count for `enc`, input count for `dec` and `upg`. Without it, readers try 600,000 then 100,000. `upg` always writes 600,000. Custom counts must be supplied when reading those files.
 
 For detailed options for each command, run:
 ```bash
@@ -307,10 +307,10 @@ const derivedKey = alice.deriveChild(bobPub, invoiceNumber);
 
 ```bash
 # Encrypt a backup file
-bbackup encrypt input.json -p "passphrase" -o encrypted.backup
+bbackup enc input.json -p "passphrase" -o encrypted.backup
 
 # Decrypt a backup file  
-bbackup decrypt encrypted.backup -p "passphrase" -o decrypted.json
+bbackup dec encrypted.backup -p "passphrase" -o decrypted.json
 ```
 
 ## Security Features
@@ -385,3 +385,25 @@ verify the mnemonic checksum, derive keys, and verify BAP ID bindings before
 using a restored seed. This format does not migrate or rekey existing accounts.
 
 The optional `inventoryComplete: false` marks phrase-only recovery with an unknown full profile inventory. Absence means complete; `true` and other values are invalid. For partial inventories, `nextProfileIndex` is only a structural bound over listed profiles, not proof that the next index is unused. Consumers must reconcile a complete backup before appending or deleting profiles or replacing a complete cloud inventory.
+
+### Seed backups in the CLI
+
+The same `enc`, `dec`, and `upg` commands accept complete and partial Sigma seed
+backups. Format detection is automatic; no conversion flag is needed. Profile
+indices, metadata, labels, numeric timestamps, and `inventoryComplete: false`
+are preserved. `upg` changes encryption strength only; it never completes an
+inventory or derives keys. Unknown versions, removed fields, and mixed legacy
+markers fail without writing an output file.
+
+`dec -o backup.json` writes plaintext with owner-only permissions (0600),
+including when overwriting an existing file. Without `-o`, `dec` deliberately
+prints the entire decrypted backup, including mnemonic/private keys, to stdout.
+Passwords passed with `-p` may appear in shell history and process arguments;
+Touch ID can retrieve an already cached password on supported Macs.
+
+The CLI validates structure and supported mnemonic word count only. It does not
+verify BIP39 checksum, derive or bind BAP IDs, generate seeds, or discover
+profiles. Use a compatible Sigma application for those operations. An absent
+`inventoryComplete` marker describes the inventory recorded when that backup
+was saved; it does not prove no profiles were created later. Upgrading an old
+backup does not discover or add those later profiles.

@@ -2,6 +2,10 @@
 
 ## 0.0.14
 
+### Fixed
+- Snapshot validated backup data before asynchronous encryption so caller mutation cannot change the encrypted inventory.
+- Keep CLI version synchronized with the package. Read custom PBKDF2 iteration counts in `dec` and `upg`, reject malformed counts, protect decrypted files with owner-only permissions, and avoid echoing malformed input JSON in errors.
+
 ### Added
 - Versioned Sigma seed backup envelopes, structural validation, and encrypted profile inventories, including partial-inventory tracking for phrase recovery.
 

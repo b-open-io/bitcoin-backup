@@ -79,9 +79,6 @@ export async function encryptData(
   const salt = globalThis.crypto.getRandomValues(new Uint8Array(SALT_LENGTH_BYTES));
   const iv = globalThis.crypto.getRandomValues(new Uint8Array(IV_LENGTH_BYTES));
 
-  // deriveKey will use its default (DEFAULT_PBKDF2_ITERATIONS) if iterations is undefined
-  const key = await deriveKey(passphrase, salt, iterations);
-
   const payloadToEncrypt = {
     ...payload,
     createdAt: isSigmaSeedBackup(payload)
@@ -91,6 +88,10 @@ export async function encryptData(
 
   const jsonPayload = JSON.stringify(payloadToEncrypt);
   const dataToEncrypt = new TextEncoder().encode(jsonPayload);
+
+  // Snapshot the validated payload before key derivation yields to the caller.
+  // deriveKey will use its default (DEFAULT_PBKDF2_ITERATIONS) if iterations is undefined
+  const key = await deriveKey(passphrase, salt, iterations);
 
   const encryptedContent = await globalThis.crypto.subtle.encrypt(
     { name: 'AES-GCM', iv: iv },
