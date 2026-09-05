@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.14
+
+### Added
+- Versioned Sigma seed backup envelopes, structural validation, and encrypted profile inventories, including partial-inventory tracking for phrase recovery.
+
+### Changed
+- Version 1 defines the derivation and empty passphrase policy; mnemonic word count determines entropy length. Existing backup formats remain unchanged.
+- Pin the integration suite to the published `bsv-bap` package instead of an undeclared sibling checkout.
+
 ## 0.0.13
 
 ### Fixed
