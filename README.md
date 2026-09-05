@@ -343,3 +343,47 @@ To migrate from legacy to Type 42 format:
 2. **Choose a key name**: Select a meaningful identifier for your master key
 3. **Create new backup**: Use `BapMasterBackup` interface
 4. **Test thoroughly**: Verify encryption/decryption works as expected
+
+## Sigma Peer Profiles seed backups
+
+`SigmaSeedBackup` is a separate member of `DecryptedBackup`, never a
+`BapMasterBackup`. Use `isSigmaSeedBackup(value)` to validate its structure;
+`getBackupType` returns `SigmaSeed`. Existing encryption and legacy key formats
+are unchanged. Older readers reject this envelope as an unknown JSON structure.
+
+```ts
+const backup: SigmaSeedBackup = {
+  format: 'sigma-seed',
+  version: 1,
+  scheme: 'brc157-peer-profiles',
+  mnemonic,
+  entropyBytes: 16,
+  passphrasePolicy: 'empty',
+  profiles: [{ index: 0, bapId }],
+  nextProfileIndex: 1,
+  createdAt: Date.now(),
+};
+const ciphertext = await encryptBackup(backup, backupPassword);
+```
+
+The seed uses an empty BIP39 passphrase; `backupPassword` protects the encrypted
+file and is independent of that policy. Profiles are hardened peers at
+`m/0'/N'`, where `N` is the profile index. Optional profile `metadata` must be a
+JSON object, and the envelope supports an optional string `label`.
+
+Validation requires version 1, the exact scheme, entropy sizes 16/20/24/28/32
+bytes with matching 12/15/18/21/24 mnemonic word counts, a nonempty profile list,
+unique indices and BAP
+IDs, and a safe integer `nextProfileIndex` greater than every used index. All
+profile indices are in 0–2147483647; `nextProfileIndex` may be 2147483648
+to record exhaustion, at which point allocation must stop. `createdAt` is a
+nonnegative safe integer timestamp in milliseconds.
+Unknown fields and mixed legacy discriminators (including top-level `rootPk`,
+`xprv`, `wif`, or `ids`) are rejected. Numeric timestamps are preserved, including
+zero. Legacy formats retain their existing ISO timestamp behavior.
+
+This package checks structure and word count only. The Sigma seed module must
+verify the mnemonic checksum, derive keys, and verify BAP ID bindings before
+using a restored seed. This format does not migrate or rekey existing accounts.
+
+The optional `inventoryComplete: false` marks phrase-only recovery with an unknown full profile inventory. Absence means complete; `true` and other values are invalid. For partial inventories, `nextProfileIndex` is only a structural bound over listed profiles, not proof that the next index is unused. Consumers must reconcile a complete backup before appending or deleting profiles or replacing a complete cloud inventory.

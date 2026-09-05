@@ -120,7 +120,33 @@ export interface YoursWalletZipBackup {
   createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if not provided)
 }
 
+/** JSON metadata preserved inside the encrypted seed envelope. */
+export type SigmaSeedJsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | SigmaSeedJsonValue[]
+  | { [key: string]: SigmaSeedJsonValue };
+
+/** Explicit seed format. Legacy master-key consumers must never receive this as BapMasterBackup. */
+export interface SigmaSeedBackup {
+  format: 'sigma-seed';
+  version: 1;
+  scheme: 'brc157-peer-profiles';
+  mnemonic: string;
+  entropyBytes: 16 | 20 | 24 | 28 | 32;
+  passphrasePolicy: 'empty';
+  profiles: { index: number; bapId: string; metadata?: { [key: string]: SigmaSeedJsonValue } }[];
+  nextProfileIndex: number;
+  /** Absent means complete; false marks phrase-only recovery with unknown inventory. */
+  inventoryComplete?: false;
+  createdAt: number;
+  label?: string;
+}
+
 export type DecryptedBackup =
+  | SigmaSeedBackup
   | BapMasterBackup
   | BapAccountBackup
   | WifBackup

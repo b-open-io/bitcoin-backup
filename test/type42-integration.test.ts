@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { PrivateKey } from '@bsv/sdk';
-import { BAP } from '../../bap/src/index';
+import { BAP } from 'bsv-bap';
 import { type BapMasterBackup, decryptBackup, encryptBackup } from '../src/index';
 
 describe('Type 42 Integration with BAP', () => {
@@ -53,6 +53,12 @@ describe('Type 42 Integration with BAP', () => {
     // 10. Verify we have the same identities
     const idKeys = bapRestored.listIds();
     expect(idKeys.length).toBe(2);
+    expect(idKeys).toEqual(bap.listIds());
+    for (const id of idKeys) {
+      expect(bapRestored.getId(id)?.getAccountKey().toWif()).toBe(
+        bap.getId(id)?.getAccountKey().toWif()
+      );
+    }
 
     // Check that we can retrieve the identities and they have the right structure
     const restoredId1 = bapRestored.getId(idKeys[0]);

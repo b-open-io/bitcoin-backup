@@ -6,6 +6,7 @@ import type {
   // BapAccountBackup, // Removed as it's covered by export *
   // WifBackup        // Removed as it's covered by export *
 } from './interfaces';
+import { hasSigmaSeedMarker, isSigmaSeedBackup } from './seed';
 
 /**
  * Validates the structure of a payload intended for encryption.
@@ -17,6 +18,7 @@ function isValidPayload(payload: unknown): payload is DecryptedBackup {
 
   // Narrow down type for property checks
   const p = payload as Record<string, unknown>;
+  if (hasSigmaSeedMarker(p)) return isSigmaSeedBackup(p);
 
   // Check for BapMasterBackup structure (legacy XPRV format)
   if (
@@ -109,7 +111,7 @@ export async function encryptBackup(
 ): Promise<EncryptedBackup> {
   if (!isValidPayload(payload)) {
     throw new Error(
-      'Invalid payload: Payload must be an object matching BapMasterBackup, BapAccountBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure.'
+      'Invalid payload: Payload must be an object matching SigmaSeedBackup, BapMasterBackup, BapAccountBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure.'
     );
   }
   if (typeof passphrase !== 'string' || passphrase.length === 0) {
