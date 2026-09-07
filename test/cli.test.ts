@@ -188,3 +188,37 @@ test('built CLI default KDF roundtrip and unknown ciphertext structure rejection
     }
   }
 }, 15000);
+
+test('built CLI seals v2 with a device slot, manages slots, and still decrypts', async () => {
+  const input = join(directory, 'v2.json');
+  const encrypted = join(directory, 'v2.bep');
+  const output = join(directory, 'v2-output.json');
+  await writeFile(input, JSON.stringify(seed));
+  const pair = (await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, [
+    'deriveBits',
+  ])) as CryptoKeyPair;
+  const raw = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey));
+  const pubkey = Array.from(raw, (b) => b.toString(16).padStart(2, '0')).join('');
+  expect(
+    (await run('enc', input, '-p', password, '-o', encrypted, '--device-pubkey', pubkey)).code
+  ).toBe(0);
+  const slots = JSON.parse((await run('slots', encrypted)).stdout) as {
+    version: number;
+    slots: { id: string }[];
+  };
+  expect(slots.version).toBe(2);
+  expect(slots.slots.map((s) => s.id)).toEqual(['passphrase', 'device-1']);
+  expect(
+    (await run('slot', 'add', encrypted, '-p', password, '--new-password', 'second-passphrase-1'))
+      .code
+  ).toBe(0);
+  expect((await run('slot', 'remove', encrypted, 'device-1', '-p', password)).code).toBe(0);
+  const after = JSON.parse((await run('slots', encrypted)).stdout) as { slots: { id: string }[] };
+  expect(after.slots.map((s) => s.id)).toEqual(['passphrase', 'passphrase-3']);
+  expect((await run('dec', encrypted, '-p', 'second-passphrase-1', '-o', output)).code).toBe(0);
+  expect(JSON.parse(await readFile(output, 'utf8'))).toEqual(seed);
+  expect((await run('slot', 'remove', encrypted, 'passphrase', '-p', password)).code).toBe(0);
+  expect(
+    (await run('slot', 'remove', encrypted, 'passphrase-3', '-p', 'second-passphrase-1')).code
+  ).toBe(1);
+}, 30000);

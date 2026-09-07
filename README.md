@@ -133,6 +133,9 @@ npx bbackup --help
 | `bbackup enc <inputFile>`     | Encrypts a JSON input file.                                             | `bbackup enc wallet.json -p "secret" -o wallet.bep`                  |
 | `bbackup dec <inputFile>`     | Decrypts a `.bep` file.                                                 | `bbackup dec wallet.bep -p "secret" -o wallet.json`                  |
 | `bbackup upg <inputFile>`     | Upgrades an encrypted file to recommended PBKDF2 iterations.          | `bbackup upg old_wallet.bep -p "secret" -o upgraded_wallet.bep`      |
+| `bbackup enc <input> --device-pubkey <hex>` | Seal a v2 envelope to the passphrase and one or more device keys. | `bbackup enc wallet.json -p "secret" --device-pubkey 04ab…` |
+| `bbackup slot add <file>` | Add a pbkdf2 or device slot, unlocking with `-p`.               | `bbackup slot add wallet.bep -p "secret" --device-pubkey 04ab…` |
+| `bbackup slot remove <file> <id>` | Remove a slot; refuses the last one.                     | `bbackup slot remove wallet.bep device-1 -p "secret"` |
 | `bbackup slots <file>`        | Prints envelope version and key slots as JSON (no passphrase).        | `bbackup slots wallet.bep`                                           |
 
 **Common Options:**

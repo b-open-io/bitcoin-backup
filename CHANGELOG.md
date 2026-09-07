@@ -6,7 +6,8 @@
 - Versioned `BEP2` envelope (v2) with key slots: one encrypted file can be unlocked by multiple credentials (`pbkdf2` passphrase slots and `device-p256` P-256 ECIES slots).
 - New API: `sealBackup`, `openBackup`, `inspectEnvelope`, `addSlot`, `removeSlot`, `rewrapBackup`, `isEnvelopeV2`, plus `eciesEncrypt`/`eciesDecrypt` and `SlotSpec`/`Unlock` types.
 - Optional `DerivationDescriptor` (`scheme`, `path`, `parentIdentityKey`, `index`, `cohort`) on `WifBackup`, `BapAccountBackup`, `MasterBackupType42`, and `BapMasterBackupLegacy`, with `isDerivationDescriptor` guard. Header copies it for locked inspection.
-- CLI: `bbackup slots <file>` prints `inspectEnvelope` output as JSON without a passphrase.
+- `updateBackupPayload` re-encrypts a new payload under an envelope's existing content key, keeping every slot.
+- CLI: `bbackup enc --device-pubkey <hex>` (repeatable) writes a v2 envelope sealed to the passphrase and each device key; `bbackup slot add|remove` manages slots; `bbackup slots <file>` inspects slots without a passphrase.
 - `decryptBackup` transparently opens v2 pbkdf2 slots; `encryptBackup` still writes v1. Existing `.bep` files decrypt unchanged.
 
 ## 0.0.14
