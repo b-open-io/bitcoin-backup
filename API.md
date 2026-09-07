@@ -167,3 +167,42 @@ verify the mnemonic checksum, derive keys, and verify BAP ID bindings before
 using a restored seed. This format does not migrate or rekey existing accounts.
 
 The optional `inventoryComplete: false` marks phrase-only recovery with an unknown full profile inventory. Absence means complete; `true` and other values are invalid. For partial inventories, `nextProfileIndex` is only a structural bound over listed profiles, not proof that the next index is unused. Consumers must reconcile a complete backup before appending or deleting profiles or replacing a complete cloud inventory.
+
+## Envelope v2 — key slots and device-key wrapping
+
+`encryptBackup` still writes v1 (`salt(16) + iv(12) + AES-GCM`). `sealBackup` writes v2 (`BEP2` magic, `0x02` version, u16 header length, header JSON, 12-byte IV, AES-256-GCM payload). `decryptBackup` transparently opens v2 pbkdf2 slots; otherwise the v1 path is unchanged.
+
+```typescript
+type SlotSpec =
+  | { type: 'pbkdf2'; id: string; passphrase: string; iterations?: number }
+  | { type: 'device-p256'; id: string; publicKey: string };
+
+type Unlock =
+  | { passphrase: string }
+  | { slotId: string; passphrase: string }
+  | { slotId: string; unwrap: (wrapped: Uint8Array) => Promise<Uint8Array> };
+
+sealBackup(payload: DecryptedBackup, slots: SlotSpec[]): Promise<EncryptedBackup>
+openBackup(encrypted: EncryptedBackup, unlock: Unlock): Promise<DecryptedBackup>
+inspectEnvelope(encrypted: EncryptedBackup): { version: 1 | 2; slots: Array<{ type: string; id: string; publicKey?: string; iterations?: number }>; descriptor?: DerivationDescriptor }
+addSlot(encrypted: EncryptedBackup, unlock: Unlock, slot: SlotSpec): Promise<EncryptedBackup>
+removeSlot(encrypted: EncryptedBackup, unlock: Unlock, slotId: string): Promise<EncryptedBackup>
+rewrapBackup(encrypted: EncryptedBackup, unlock: Unlock, slots: SlotSpec[]): Promise<EncryptedBackup>
+isEnvelopeV2(encrypted: EncryptedBackup): boolean
+```
+
+Slot `id` values are 1–63 chars matching `^[a-zA-Z0-9][a-zA-Z0-9._-]*$` and unique within the envelope. `device-p256` wrapping is ECDH P-256 + HKDF-SHA256 (`info "se-vault-v1"`) + AES-256-GCM; `wrapped` is `ephemeralPub(65) + nonce(12) + ciphertext + tag(16)`. Use `eciesEncrypt`/`eciesDecrypt` for software P-256 keys; hardware recipients unwrap via the `unwrap` callback. `removeSlot` refuses the last slot; `rewrapBackup` generates a new content key.
+
+## Derivation descriptor
+
+```typescript
+export interface DerivationDescriptor {
+  scheme: 'brc157' | 'bip32' | 'type42' | 'brc42' | 'legacy-bip32-unhardened';
+  path?: string;
+  parentIdentityKey?: string;
+  index?: number;
+  cohort?: string;
+}
+```
+
+Optional `derivation?: DerivationDescriptor` exists on `WifBackup`, `BapAccountBackup`, `MasterBackupType42`, and `BapMasterBackupLegacy`. It does not affect type detection; use `isDerivationDescriptor(value)` to validate. `SigmaSeedBackup` is unchanged. Sealed v2 headers copy a valid payload descriptor for locked inspection.

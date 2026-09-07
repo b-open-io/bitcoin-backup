@@ -5,10 +5,14 @@ import path from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
 import { version } from '../package.json';
 import {
+  addSlot,
   type DecryptedBackup,
   decryptBackup,
   encryptBackup,
+  inspectEnvelope,
   RECOMMENDED_PBKDF2_ITERATIONS,
+  removeSlot,
+  sealBackup,
 } from '../src/index';
 
 const program = new Command();
@@ -83,10 +87,22 @@ program
     parseIterations,
     RECOMMENDED_PBKDF2_ITERATIONS
   )
+  .option(
+    '--device-pubkey <hex>',
+    'Also seal to a P-256 device public key (65-byte X9.63 hex); writes a v2 envelope. Repeatable.',
+    (value: string, previous: string[] = []) => [...previous, value],
+    [] as string[]
+  )
   .action(
     async (
       inputFile: string,
-      options: { password?: string; output?: string; iterations: number; touchid?: boolean }
+      options: {
+        password?: string;
+        output?: string;
+        iterations: number;
+        touchid?: boolean;
+        devicePubkey: string[];
+      }
     ) => {
       let outputFile = options.output;
       if (!outputFile) {
@@ -117,11 +133,22 @@ program
           );
         }
 
-        const encryptedBackupString = await encryptBackup(
-          decryptedPayload,
-          password,
-          options.iterations
-        );
+        const encryptedBackupString =
+          options.devicePubkey.length === 0
+            ? await encryptBackup(decryptedPayload, password, options.iterations)
+            : await sealBackup(decryptedPayload, [
+                {
+                  type: 'pbkdf2',
+                  id: 'passphrase',
+                  passphrase: password,
+                  iterations: options.iterations,
+                },
+                ...options.devicePubkey.map((publicKey, i) => ({
+                  type: 'device-p256' as const,
+                  id: `device-${i + 1}`,
+                  publicKey,
+                })),
+              ]);
 
         const absoluteOutputPath = path.resolve(outputFile);
         const outputDir = path.dirname(absoluteOutputPath);
@@ -314,6 +341,94 @@ program
       }
     }
   );
+
+// --- slots ---
+
+program
+  .command('slots <file>')
+  .description('Inspect envelope version and key slots without a passphrase.')
+  .action(async (file: string) => {
+    try {
+      const absoluteInputPath = path.resolve(file);
+      const encryptedString = await fs.readFile(absoluteInputPath, 'utf-8');
+      if (!encryptedString.trim()) {
+        console.error('Error: Encrypted file is empty or contains only whitespace.');
+        process.exit(1);
+      }
+      const info = inspectEnvelope(encryptedString.trim());
+      console.log(JSON.stringify(info, null, 2));
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Error:', error.message);
+      } else {
+        console.error('An unknown error occurred during inspection:', error);
+      }
+      process.exit(1);
+    }
+  });
+
+// --- slot add / remove ---
+
+const slot = program.command('slot').description('Manage key slots on a v2 envelope.');
+
+slot
+  .command('add <file>')
+  .description('Add a slot, unlocking with the existing passphrase.')
+  .option('-p, --password <password>', 'Passphrase of an existing pbkdf2 slot')
+  .option('--device-pubkey <hex>', 'P-256 device public key (65-byte X9.63 hex) for the new slot')
+  .option('--new-password <password>', 'Passphrase for a new pbkdf2 slot')
+  .option('--id <id>', 'Slot id (defaults to device-N or passphrase-N)')
+  .action(
+    async (
+      file: string,
+      options: { password?: string; devicePubkey?: string; newPassword?: string; id?: string }
+    ) => {
+      try {
+        if (!options.password) throw new Error('Password required. Use -p <password>.');
+        if (!!options.devicePubkey === !!options.newPassword) {
+          throw new Error('Give exactly one of --device-pubkey or --new-password.');
+        }
+        const absolutePath = path.resolve(file);
+        const encrypted = (await fs.readFile(absolutePath, 'utf-8')).trim();
+        const existing = inspectEnvelope(encrypted).slots.length;
+        const spec = options.devicePubkey
+          ? {
+              type: 'device-p256' as const,
+              id: options.id ?? `device-${existing + 1}`,
+              publicKey: options.devicePubkey,
+            }
+          : {
+              type: 'pbkdf2' as const,
+              id: options.id ?? `passphrase-${existing + 1}`,
+              passphrase: options.newPassword as string,
+            };
+        const next = await addSlot(encrypted, { passphrase: options.password }, spec);
+        await fs.writeFile(absolutePath, next, { encoding: 'utf-8', mode: 0o600 });
+        console.log(`Slot '${spec.id}' added to ${absolutePath}`);
+      } catch (error) {
+        console.error('Error:', error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    }
+  );
+
+slot
+  .command('remove <file> <slotId>')
+  .description('Remove a slot, unlocking with the existing passphrase. Refuses the last slot.')
+  .option('-p, --password <password>', 'Passphrase of an existing pbkdf2 slot')
+  .action(async (file: string, slotId: string, options: { password?: string }) => {
+    try {
+      if (!options.password) throw new Error('Password required. Use -p <password>.');
+      const absolutePath = path.resolve(file);
+      const encrypted = (await fs.readFile(absolutePath, 'utf-8')).trim();
+      const next = await removeSlot(encrypted, { passphrase: options.password }, slotId);
+      await fs.writeFile(absolutePath, next, { encoding: 'utf-8', mode: 0o600 });
+      console.log(`Slot '${slotId}' removed from ${absolutePath}`);
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
 
 // --- forget ---
 

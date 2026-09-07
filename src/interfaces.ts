@@ -1,9 +1,18 @@
+export interface DerivationDescriptor {
+  scheme: 'brc157' | 'bip32' | 'type42' | 'brc42' | 'legacy-bip32-unhardened';
+  path?: string; // e.g. "m/0'/1'" for brc157 profiles
+  parentIdentityKey?: string; // compressed pubkey hex of the parent root, if derived
+  index?: number;
+  cohort?: string; // free label for legacy derivation cohorts
+}
+
 export interface BapMasterBackupLegacy {
   ids: string; // Encrypted data from bsv-bap's bap.exportIds()
   xprv: string; // Master extended private key
   mnemonic: string; // BIP39 mnemonic phrase
   label?: string; // User-defined label (optional)
   createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if not provided)
+  derivation?: DerivationDescriptor;
 }
 
 export interface MasterBackupType42 {
@@ -11,6 +20,7 @@ export interface MasterBackupType42 {
   rootPk: string; // Master private key in WIF format (Type 42)
   label?: string; // User-defined label (optional)
   createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if not provided)
+  derivation?: DerivationDescriptor;
 }
 
 // Main interface that users import - supports both legacy and Type 42 formats
@@ -21,12 +31,14 @@ export interface BapAccountBackup {
   id: string; // BAP ID for this account
   label?: string; // User-defined label (optional)
   createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if not provided)
+  derivation?: DerivationDescriptor;
 }
 
 export interface WifBackup {
   wif: string;
   label?: string; // User-defined label (optional)
   createdAt?: string; // ISO 8601 timestamp (populated by encryptBackup if a new WifBackup object is passed)
+  derivation?: DerivationDescriptor;
 }
 
 export interface OneSatBackup {

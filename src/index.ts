@@ -1,99 +1,30 @@
-import { decryptData, encryptData } from './crypto';
-import type {
-  DecryptedBackup,
-  EncryptedBackup,
-  // BapMasterBackup, // Removed as it's covered by export *
-  // BapAccountBackup, // Removed as it's covered by export *
-  // WifBackup        // Removed as it's covered by export *
-} from './interfaces';
-import { hasSigmaSeedMarker, isSigmaSeedBackup } from './seed';
+import { decryptData, encryptData, isValidPayload } from './crypto';
+import { decodeBase64Envelope, hasV2Magic, openV2WithPassphrase } from './envelope';
+import type { DecryptedBackup, EncryptedBackup } from './interfaces';
+
+export {
+  addSlot,
+  type DeviceP256Slot,
+  type EnvelopeHeader,
+  type InspectResult,
+  inspectEnvelope,
+  isEnvelopeV2,
+  openBackup,
+  type Pbkdf2Slot,
+  removeSlot,
+  rewrapBackup,
+  type Slot,
+  type SlotSpec,
+  sealBackup,
+  type Unlock,
+  updateBackupPayload,
+} from './envelope';
 
 /**
  * Validates the structure of a payload intended for encryption.
  * @param payload The payload to validate.
  * @returns True if the payload is valid, false otherwise.
  */
-function isValidPayload(payload: unknown): payload is DecryptedBackup {
-  if (!payload || typeof payload !== 'object') return false;
-
-  // Narrow down type for property checks
-  const p = payload as Record<string, unknown>;
-  if (hasSigmaSeedMarker(p)) return isSigmaSeedBackup(p);
-
-  // Check for BapMasterBackup structure (legacy XPRV format)
-  if (
-    'xprv' in p &&
-    typeof p.xprv === 'string' &&
-    'ids' in p &&
-    typeof p.ids === 'string' &&
-    'mnemonic' in p &&
-    typeof p.mnemonic === 'string'
-  ) {
-    return true;
-  }
-
-  // Check for BapMasterBackup structure (Type 42 format)
-  if (
-    'rootPk' in p &&
-    typeof p.rootPk === 'string' &&
-    'ids' in p &&
-    typeof p.ids === 'string' &&
-    !('xprv' in p) // Ensure it's not a legacy format
-  ) {
-    return true;
-  }
-
-  // Check for BapAccountBackup structure
-  if ('wif' in p && typeof p.wif === 'string' && 'id' in p && typeof p.id === 'string') {
-    return true;
-  }
-
-  // Check for WifBackup structure
-  if (
-    'wif' in p &&
-    typeof p.wif === 'string' &&
-    !('id' in p) && // Differentiates from BapAccountBackup
-    !('xprv' in p) && // Differentiates from BapMasterBackupLegacy
-    !('rootPk' in p) // Differentiates from MasterBackupType42
-  ) {
-    return true;
-  }
-
-  // Check for OneSatBackup structure
-  if (
-    'ordPk' in p &&
-    typeof p.ordPk === 'string' &&
-    'payPk' in p &&
-    typeof p.payPk === 'string' &&
-    'identityPk' in p &&
-    typeof p.identityPk === 'string'
-  ) {
-    return true;
-  }
-
-  // Check for VaultBackup structure - just needs encryptedVault
-  if ('encryptedVault' in p && typeof p.encryptedVault === 'string') {
-    return true;
-  }
-
-  // Check for YoursWalletBackup structure - has payPk and ordPk like OneSat, but may have mnemonic
-  if (
-    'payPk' in p &&
-    typeof p.payPk === 'string' &&
-    'ordPk' in p &&
-    typeof p.ordPk === 'string' &&
-    ('mnemonic' in p || 'payDerivationPath' in p || 'ordDerivationPath' in p) // Distinguishes from OneSatBackup
-  ) {
-    return true;
-  }
-
-  // Check for YoursWalletZipBackup structure (parsed Yours Wallet ZIP)
-  if ('chromeStorage' in p && typeof p.chromeStorage === 'object' && p.chromeStorage !== null) {
-    return true;
-  }
-
-  return false;
-}
 
 /**
  * Encrypts a backup payload object into an encrypted string.
@@ -145,6 +76,15 @@ export async function decryptBackup(
   if (typeof passphrase !== 'string' || passphrase.length === 0) {
     throw new Error('Invalid passphrase: Passphrase must be a non-empty string.');
   }
+  let decoded: Uint8Array | null = null;
+  try {
+    decoded = decodeBase64Envelope(encryptedString);
+  } catch {
+    decoded = null;
+  }
+  if (decoded && hasV2Magic(decoded)) {
+    return openV2WithPassphrase(encryptedString, passphrase, attemptIterations);
+  }
   return decryptData(encryptedString, passphrase, attemptIterations);
 }
 
@@ -154,6 +94,8 @@ export {
   LEGACY_PBKDF2_ITERATIONS,
   RECOMMENDED_PBKDF2_ITERATIONS,
 } from './crypto';
+// Re-export ECIES helpers for device-key slots
+export { eciesDecrypt, eciesEncrypt } from './ecies';
 // Re-export type guards for backup type detection
 export * from './guards';
 // Re-export interfaces for library consumers

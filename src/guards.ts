@@ -7,6 +7,7 @@ import type {
   BapMasterBackup,
   BapMasterBackupLegacy,
   DecryptedBackup,
+  DerivationDescriptor,
   MasterBackupType42,
   OneSatBackup,
   VaultBackup,
@@ -14,6 +15,27 @@ import type {
   YoursWalletBackup,
   YoursWalletZipBackup,
 } from './interfaces';
+
+/**
+ * Type guard: checks if the value is a valid DerivationDescriptor.
+ */
+export function isDerivationDescriptor(value: unknown): value is DerivationDescriptor {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const v = value as Record<string, unknown>;
+  const allowed = new Set(['scheme', 'path', 'parentIdentityKey', 'index', 'cohort']);
+  for (const key of Object.keys(v)) {
+    if (!allowed.has(key)) return false;
+  }
+  const schemes = new Set(['brc157', 'bip32', 'type42', 'brc42', 'legacy-bip32-unhardened']);
+  if (typeof v.scheme !== 'string' || !schemes.has(v.scheme)) return false;
+  if ('path' in v && typeof v.path !== 'string') return false;
+  if ('parentIdentityKey' in v && typeof v.parentIdentityKey !== 'string') return false;
+  if ('index' in v) {
+    if (typeof v.index !== 'number' || !Number.isSafeInteger(v.index) || v.index < 0) return false;
+  }
+  if ('cohort' in v && typeof v.cohort !== 'string') return false;
+  return true;
+}
 
 /**
  * Type guard: checks if the backup is a legacy BAP master backup (xprv + mnemonic).
