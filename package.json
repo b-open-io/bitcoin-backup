@@ -31,12 +31,12 @@
     "bun"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/b-open-io/bitcoin-backup",
+  "homepage": "https://github.com/opldotdev/bitcoin-backup",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/b-open-io/bitcoin-backup.git"
+    "url": "git+https://github.com/opldotdev/bitcoin-backup.git"
   },
-  "bugs": "https://github.com/b-open-io/bitcoin-backup/issues",
+  "bugs": "https://github.com/opldotdev/bitcoin-backup/issues",
   "author": "Satchmo",
   "devDependencies": {
     "@biomejs/biome": "^2.5.0",
