@@ -1,4 +1,4 @@
-import { describe, expect, it, updateBackupPayload } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Utils } from '@bsv/sdk';
@@ -16,6 +16,7 @@ import {
   removeSlot,
   rewrapBackup,
   sealBackup,
+  updateBackupPayload,
   type WifBackup,
 } from '../src/index';
 
