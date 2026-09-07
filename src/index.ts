@@ -17,6 +17,7 @@ export {
   type SlotSpec,
   sealBackup,
   type Unlock,
+  updateBackupPayload,
 } from './envelope';
 
 /**

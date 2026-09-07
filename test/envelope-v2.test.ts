@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, updateBackupPayload } from 'bun:test';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Utils } from '@bsv/sdk';
@@ -384,5 +384,35 @@ describe('v1 fixtures still treated as v1', () => {
     expect(isEnvelopeV2(v1)).toBe(false);
     const dec = (await decryptBackup(v1, passphraseA)) as WifBackup;
     expect(dec.wif).toBe(payload.wif);
+  });
+});
+
+describe('updateBackupPayload', () => {
+  it('replaces the payload and keeps every slot', async () => {
+    const pair = (await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, [
+      'deriveBits',
+    ])) as CryptoKeyPair;
+    const raw = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey));
+    const publicKey = Array.from(raw, (b) => b.toString(16).padStart(2, '0')).join('');
+    const sealed = await sealBackup({ wif: 'first' }, [
+      { type: 'pbkdf2', id: 'pw', passphrase: 'correct horse battery' },
+      { type: 'device-p256', id: 'dev', publicKey },
+    ]);
+    const updated = await updateBackupPayload(
+      sealed,
+      { passphrase: 'correct horse battery' },
+      {
+        wif: 'second',
+      }
+    );
+    expect(inspectEnvelope(updated).slots.map((s) => s.id)).toEqual(['pw', 'dev']);
+    expect(await openBackup(updated, { passphrase: 'correct horse battery' })).toMatchObject({
+      wif: 'second',
+    });
+    const viaDevice = await openBackup(updated, {
+      slotId: 'dev',
+      unwrap: (wrapped) => eciesDecrypt(pair.privateKey, wrapped),
+    });
+    expect(viaDevice).toMatchObject({ wif: 'second' });
   });
 });

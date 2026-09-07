@@ -663,3 +663,37 @@ export async function rewrapBackup(
   );
   return encodeEnvelope(newHeader, iv, ct);
 }
+
+/**
+ * Re-encrypts a new payload under the envelope's existing content key, keeping every slot.
+ * Use this to update a document without needing the credentials of every other slot.
+ */
+export async function updateBackupPayload(
+  encrypted: EncryptedBackup,
+  unlock: Unlock,
+  payload: DecryptedBackup
+): Promise<EncryptedBackup> {
+  if (!isValidPayload(payload)) {
+    throw new Error('Invalid payload: Payload must match a supported backup structure.');
+  }
+  const decoded = decodeBase64Envelope(encrypted);
+  if (!hasV2Magic(decoded)) throw new Error('Invalid envelope: not a v2 envelope.');
+  const { header } = parseEnvelope(decoded);
+  const contentKey = await resolveContentKey(header, unlock);
+  const descriptor = getDescriptorFromPayload(payload);
+  const newHeader: EnvelopeHeader = {
+    v: 2,
+    slots: header.slots,
+    ...(descriptor !== undefined ? { descriptor } : {}),
+  };
+  const iv = globalThis.crypto.getRandomValues(new Uint8Array(IV_LENGTH_BYTES));
+  const key = await importContentKey(contentKey, ['encrypt']);
+  const ct = new Uint8Array(
+    await globalThis.crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv as BufferSource },
+      key,
+      new TextEncoder().encode(buildPayloadJson(payload)) as BufferSource
+    )
+  );
+  return encodeEnvelope(newHeader, iv, ct);
+}
