@@ -56,6 +56,7 @@ npx bbackup dec wallet.bep -p "your-strong-password-here"
 ## Features
 
 *   **Chain-Agnostic Core:** Securely encrypt and decrypt WIF private keys, xprv/mnemonic phrases for HD wallets, or custom data structures from any blockchain or cryptographic application.
+*   **Envelope v2 key slots:** Seal one encrypted file for multiple credentials (passphrase slots plus device-bound P-256 slots) while existing `.bep` files keep decrypting unchanged.
 *   **Strong Encryption:** Secures backup data using AES-256-GCM with PBKDF2 key derivation (see Security Model).
 *   **Multiple Backup Formats:** Supports various backup structures like `BapMasterBackup`, `BapMemberBackup`, `WifBackup`, `OneSatBackup`, and `VaultBackup`. The type of backup is inferred from payload structure. (See [API Documentation](./API.md) for full type details).
 *   **Handles Unencrypted Data:** Easily encrypt existing unencrypted backup objects.
@@ -95,6 +96,20 @@ Decrypts an encrypted backup string.
 *   `passphrase`: Decryption passphrase.
 *   Returns: The `DecryptedBackupPayload`. Type is inferred.
 *   Handles legacy WIFs and tries recommended then legacy iterations.
+*   Transparently opens v2 envelopes via their pbkdf2 slots; v1 files are unchanged.
+
+### Envelope v2 (`sealBackup` / `openBackup`)
+
+```typescript
+const encrypted = await sealBackup(payload, [
+  { type: 'pbkdf2', id: 'main', passphrase },
+  { type: 'device-p256', id: 'phone', publicKey: devicePubHex },
+]);
+const decrypted = await openBackup(encrypted, { passphrase });
+// or: await openBackup(encrypted, { slotId: 'phone', unwrap: async (wrapped) => hardwareUnwrap(wrapped) });
+```
+
+Helpers: `inspectEnvelope`, `isEnvelopeV2`, `addSlot`, `removeSlot` (refuses the last slot), `rewrapBackup` (new content key), `eciesEncrypt`/`eciesDecrypt`. Optional `derivation` descriptors on key payloads are copied to the v2 header for locked inspection.
 
 *(For more detailed examples and advanced usage, please refer to the `test/` directory or consider creating an `examples/` directory in your project.)*
 
@@ -118,6 +133,7 @@ npx bbackup --help
 | `bbackup enc <inputFile>`     | Encrypts a JSON input file.                                             | `bbackup enc wallet.json -p "secret" -o wallet.bep`                  |
 | `bbackup dec <inputFile>`     | Decrypts a `.bep` file.                                                 | `bbackup dec wallet.bep -p "secret" -o wallet.json`                  |
 | `bbackup upg <inputFile>`     | Upgrades an encrypted file to recommended PBKDF2 iterations.          | `bbackup upg old_wallet.bep -p "secret" -o upgraded_wallet.bep`      |
+| `bbackup slots <file>`        | Prints envelope version and key slots as JSON (no passphrase).        | `bbackup slots wallet.bep`                                           |
 
 **Common Options:**
 *   `-p, --password <password>`: (Required) The passphrase for encryption/decryption.

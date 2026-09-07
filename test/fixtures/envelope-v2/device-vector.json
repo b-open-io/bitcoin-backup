@@ -1,0 +1,17 @@
+{
+  "recipientPrivateJwk": {
+    "crv": "P-256",
+    "d": "Z_2PsdzGhizlAR7hu68uHsOeXlQi_HX2UdxClB0O_aQ",
+    "ext": true,
+    "key_ops": ["deriveBits"],
+    "kty": "EC",
+    "x": "GHQTcbAkTCXmAhSr3Hi04yyRHkCzZl2rr8LMfOp9TQk",
+    "y": "OYvwqahFAY6WzqLvnQL3Rrn9T_oMU0qvwoapbF6h1J8"
+  },
+  "recipientPublicKeyHex": "0418741371b0244c25e60214abdc78b4e32c911e40b3665dabafc2cc7cea7d4d09398bf0a9a845018e96cea2ef9d02f746b9fd4ffa0c534aafc286a96c5ea1d49f",
+  "contentKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "wrappedBase64": "BOrONi/1O4i7edxeyZgyuSi4EQYNx9i5asRm1FheaxxmGVRHvaalFbcV4YprnGIlpl+nYlnOh48e/dBhxux+yASsh24T9ewDlzNCp9MYO+Xz6J1frC2wd/Z44+pcvrDMIKBQzyfCua5tYIs19mCTuJOQxOiYQD2V5lkx43E=",
+  "ephemeralPubHex": "04eace362ff53b88bb79dc5ec99832b928b811060dc7d8b96ac466d4585e6b1c66195447bda6a515b715e18a6b9c6225a65fa76259ce878f1efdd061c6ec7ec804",
+  "nonceHex": "ac876e13f5ec03973342a7d3",
+  "ciphertextHex": "183be5f3e89d5fac2db077f678e3ea5cbeb0cc20a050cf27c2b9ae6d608b35f66093b89390c4e898403d95e65931e371"
+}

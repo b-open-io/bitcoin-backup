@@ -31,7 +31,7 @@ const AES_KEY_LENGTH_BITS = 256;
  * @param iterations The number of PBKDF2 iterations to use. Defaults to DEFAULT_PBKDF2_ITERATIONS.
  * @returns A promise that resolves to the derived CryptoKey.
  */
-async function deriveKey(
+export async function deriveKey(
   passphrase: string,
   salt: Uint8Array<ArrayBuffer>,
   iterations: number = RECOMMENDED_PBKDF2_ITERATIONS // Default to new recommended standard
@@ -108,6 +108,140 @@ export async function encryptData(
 }
 
 /**
+ * Interprets a decrypted backup string: JSON payloads are matched by structure,
+ * anything that is not JSON is treated as a legacy raw WIF backup.
+ */
+export function parseDecryptedPayload(decryptedString: string): DecryptedBackup {
+  try {
+    const parsedJson = JSON.parse(decryptedString);
+    if (typeof parsedJson === 'object' && parsedJson !== null) {
+      if (hasSigmaSeedMarker(parsedJson)) {
+        if (!isSigmaSeedBackup(parsedJson)) throw new Error('Invalid Sigma seed backup structure.');
+        return parsedJson;
+      }
+      if ('xprv' in parsedJson && 'ids' in parsedJson && 'mnemonic' in parsedJson)
+        return parsedJson as BapMasterBackup;
+      if ('rootPk' in parsedJson && 'ids' in parsedJson) return parsedJson as BapMasterBackup;
+      if ('wif' in parsedJson && 'id' in parsedJson) return parsedJson as BapAccountBackup;
+      // Check for YoursWalletBackup before OneSatBackup (more specific)
+      if (
+        'payPk' in parsedJson &&
+        'ordPk' in parsedJson &&
+        ('mnemonic' in parsedJson ||
+          'payDerivationPath' in parsedJson ||
+          'ordDerivationPath' in parsedJson)
+      )
+        return parsedJson as YoursWalletBackup;
+      if (
+        'chromeStorage' in parsedJson &&
+        typeof parsedJson.chromeStorage === 'object' &&
+        parsedJson.chromeStorage !== null
+      )
+        return parsedJson as YoursWalletZipBackup;
+      if ('ordPk' in parsedJson && 'payPk' in parsedJson && 'identityPk' in parsedJson)
+        return parsedJson as OneSatBackup;
+      if ('encryptedVault' in parsedJson) return parsedJson as VaultBackup;
+      if (
+        'wif' in parsedJson &&
+        !('id' in parsedJson) &&
+        !('xprv' in parsedJson) &&
+        !('rootPk' in parsedJson)
+      )
+        return parsedJson as WifBackup;
+    }
+    throw new Error('Invalid backup structure after JSON parse.');
+  } catch (jsonError) {
+    if (jsonError instanceof SyntaxError) return { wif: decryptedString } as WifBackup;
+    throw jsonError;
+  }
+}
+
+/**
+ * Structural check that a payload matches one of the supported backup shapes.
+ */
+export function isValidPayload(payload: unknown): payload is DecryptedBackup {
+  if (!payload || typeof payload !== 'object') return false;
+
+  // Narrow down type for property checks
+  const p = payload as Record<string, unknown>;
+  if (hasSigmaSeedMarker(p)) return isSigmaSeedBackup(p);
+
+  // Check for BapMasterBackup structure (legacy XPRV format)
+  if (
+    'xprv' in p &&
+    typeof p.xprv === 'string' &&
+    'ids' in p &&
+    typeof p.ids === 'string' &&
+    'mnemonic' in p &&
+    typeof p.mnemonic === 'string'
+  ) {
+    return true;
+  }
+
+  // Check for BapMasterBackup structure (Type 42 format)
+  if (
+    'rootPk' in p &&
+    typeof p.rootPk === 'string' &&
+    'ids' in p &&
+    typeof p.ids === 'string' &&
+    !('xprv' in p) // Ensure it's not a legacy format
+  ) {
+    return true;
+  }
+
+  // Check for BapAccountBackup structure
+  if ('wif' in p && typeof p.wif === 'string' && 'id' in p && typeof p.id === 'string') {
+    return true;
+  }
+
+  // Check for WifBackup structure
+  if (
+    'wif' in p &&
+    typeof p.wif === 'string' &&
+    !('id' in p) && // Differentiates from BapAccountBackup
+    !('xprv' in p) && // Differentiates from BapMasterBackupLegacy
+    !('rootPk' in p) // Differentiates from MasterBackupType42
+  ) {
+    return true;
+  }
+
+  // Check for OneSatBackup structure
+  if (
+    'ordPk' in p &&
+    typeof p.ordPk === 'string' &&
+    'payPk' in p &&
+    typeof p.payPk === 'string' &&
+    'identityPk' in p &&
+    typeof p.identityPk === 'string'
+  ) {
+    return true;
+  }
+
+  // Check for VaultBackup structure - just needs encryptedVault
+  if ('encryptedVault' in p && typeof p.encryptedVault === 'string') {
+    return true;
+  }
+
+  // Check for YoursWalletBackup structure - has payPk and ordPk like OneSat, but may have mnemonic
+  if (
+    'payPk' in p &&
+    typeof p.payPk === 'string' &&
+    'ordPk' in p &&
+    typeof p.ordPk === 'string' &&
+    ('mnemonic' in p || 'payDerivationPath' in p || 'ordDerivationPath' in p) // Distinguishes from OneSatBackup
+  ) {
+    return true;
+  }
+
+  // Check for YoursWalletZipBackup structure (parsed Yours Wallet ZIP)
+  if ('chromeStorage' in p && typeof p.chromeStorage === 'object' && p.chromeStorage !== null) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Decrypts an encrypted backup string back into a backup payload object.
  * Handles JSON-structured and legacy raw WIF backups.
  * @param attemptIterations Optional. A specific iteration count, or an array of counts to try in order.
@@ -157,51 +291,7 @@ export async function decryptData(
         key,
         encryptedCiphertext
       );
-      const decryptedString = new TextDecoder().decode(decryptedArrayBuffer);
-      try {
-        const parsedJson = JSON.parse(decryptedString);
-        if (typeof parsedJson === 'object' && parsedJson !== null) {
-          if (hasSigmaSeedMarker(parsedJson)) {
-            if (!isSigmaSeedBackup(parsedJson))
-              throw new Error('Invalid Sigma seed backup structure.');
-            return parsedJson;
-          }
-          if ('xprv' in parsedJson && 'ids' in parsedJson && 'mnemonic' in parsedJson)
-            return parsedJson as BapMasterBackup;
-          if ('rootPk' in parsedJson && 'ids' in parsedJson) return parsedJson as BapMasterBackup;
-          if ('wif' in parsedJson && 'id' in parsedJson) return parsedJson as BapAccountBackup;
-          // Check for YoursWalletBackup before OneSatBackup (more specific)
-          if (
-            'payPk' in parsedJson &&
-            'ordPk' in parsedJson &&
-            ('mnemonic' in parsedJson ||
-              'payDerivationPath' in parsedJson ||
-              'ordDerivationPath' in parsedJson)
-          )
-            return parsedJson as YoursWalletBackup;
-          // Check for YoursWalletZipBackup (parsed Yours Wallet ZIP)
-          if (
-            'chromeStorage' in parsedJson &&
-            typeof parsedJson.chromeStorage === 'object' &&
-            parsedJson.chromeStorage !== null
-          )
-            return parsedJson as YoursWalletZipBackup;
-          if ('ordPk' in parsedJson && 'payPk' in parsedJson && 'identityPk' in parsedJson)
-            return parsedJson as OneSatBackup;
-          if ('encryptedVault' in parsedJson) return parsedJson as VaultBackup;
-          if (
-            'wif' in parsedJson &&
-            !('id' in parsedJson) &&
-            !('xprv' in parsedJson) &&
-            !('rootPk' in parsedJson)
-          )
-            return parsedJson as WifBackup;
-        }
-        throw new Error('Invalid backup structure after JSON parse.');
-      } catch (jsonError) {
-        if (jsonError instanceof SyntaxError) return { wif: decryptedString } as WifBackup;
-        throw jsonError;
-      }
+      return parseDecryptedPayload(new TextDecoder().decode(decryptedArrayBuffer));
     } catch (decryptionError) {
       lastError = decryptionError as Error;
       // console.log(`Decryption attempt failed with ${iterations} iterations.`); // Optional: for debugging

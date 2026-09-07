@@ -8,6 +8,7 @@ import {
   type DecryptedBackup,
   decryptBackup,
   encryptBackup,
+  inspectEnvelope,
   RECOMMENDED_PBKDF2_ITERATIONS,
 } from '../src/index';
 
@@ -314,6 +315,31 @@ program
       }
     }
   );
+
+// --- slots ---
+
+program
+  .command('slots <file>')
+  .description('Inspect envelope version and key slots without a passphrase.')
+  .action(async (file: string) => {
+    try {
+      const absoluteInputPath = path.resolve(file);
+      const encryptedString = await fs.readFile(absoluteInputPath, 'utf-8');
+      if (!encryptedString.trim()) {
+        console.error('Error: Encrypted file is empty or contains only whitespace.');
+        process.exit(1);
+      }
+      const info = inspectEnvelope(encryptedString.trim());
+      console.log(JSON.stringify(info, null, 2));
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Error:', error.message);
+      } else {
+        console.error('An unknown error occurred during inspection:', error);
+      }
+      process.exit(1);
+    }
+  });
 
 // --- forget ---
 
