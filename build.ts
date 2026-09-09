@@ -10,7 +10,7 @@ const defaultLibraryConfig: BuildConfig = {
   // statically imports `createRequire` from "module" (its worker pool path).
   // That breaks browser/edge bundlers (Turbopack: "Can't resolve 'module'").
   // Externalized, consumers resolve fflate's own browser-safe entry instead.
-  external: ['@bsv/sdk', '@1sat/vault', 'fflate'],
+  external: ['@bsv/sdk', '@1sat/vault', 'fflate', '@noble/hashes'],
   target: 'node'
 }
 

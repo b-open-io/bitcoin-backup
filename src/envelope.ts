@@ -1,5 +1,10 @@
 import { Utils } from '@bsv/sdk';
 import {
+  deriveArgon2idKey,
+  resolveArgon2idParams,
+  type Argon2idParams,
+} from './argon2';
+import {
   deriveKey,
   isValidPayload,
   parseDecryptedPayload,
@@ -8,6 +13,7 @@ import {
 import { assertP256PublicKeyHex, eciesEncrypt } from './ecies';
 import { isDerivationDescriptor } from './guards';
 import type { DecryptedBackup, DerivationDescriptor, EncryptedBackup } from './interfaces';
+import { assertLegacyPassphrase, assertPassphrase } from './passphrase';
 import { isSigmaSeedBackup } from './seed';
 
 const { toArray, toBase64 } = Utils;
@@ -39,7 +45,17 @@ export type DeviceP256Slot = {
   wrapped: string;
 };
 
-export type Slot = Pbkdf2Slot | DeviceP256Slot;
+export type Argon2idSlot = {
+  type: 'argon2id';
+  id: string;
+  salt: string;
+  memoryKiB: number;
+  iterations: number;
+  parallelism: number;
+  wrapped: string;
+};
+
+export type Slot = Pbkdf2Slot | DeviceP256Slot | Argon2idSlot;
 
 export interface EnvelopeHeader {
   v: 2;
@@ -49,6 +65,7 @@ export interface EnvelopeHeader {
 
 export type SlotSpec =
   | { type: 'pbkdf2'; id: string; passphrase: string; iterations?: number }
+  | ({ type: 'argon2id'; id: string; passphrase: string } & Partial<Argon2idParams>)
   | { type: 'device-p256'; id: string; publicKey: string };
 
 export type Unlock =
@@ -58,7 +75,14 @@ export type Unlock =
 
 export interface InspectResult {
   version: 1 | 2;
-  slots: Array<{ type: string; id: string; publicKey?: string; iterations?: number }>;
+  slots: Array<{
+    type: string;
+    id: string;
+    publicKey?: string;
+    iterations?: number;
+    memoryKiB?: number;
+    parallelism?: number;
+  }>;
   descriptor?: DerivationDescriptor;
 }
 
@@ -114,23 +138,36 @@ function getDescriptorFromPayload(payload: DecryptedBackup): DerivationDescripto
 
 function validateSlotSpecShape(slot: SlotSpec, seen: Set<string>): void {
   if (!slot || typeof slot !== 'object') throw new Error('Invalid slot: must be an object.');
-  if (slot.type !== 'pbkdf2' && slot.type !== 'device-p256') {
+  if (slot.type !== 'pbkdf2' && slot.type !== 'argon2id' && slot.type !== 'device-p256') {
     throw new Error(`Unknown slot type '${(slot as { type: unknown }).type}'.`);
   }
   validateSlotId(slot.id);
   if (seen.has(slot.id)) throw new Error(`Duplicate slot id '${slot.id}'.`);
   seen.add(slot.id);
   if (slot.type === 'pbkdf2') {
-    if (typeof slot.passphrase !== 'string' || slot.passphrase.length === 0) {
-      throw new Error('Invalid passphrase: Passphrase must be a non-empty string.');
-    }
-    if (slot.passphrase.length < 8) {
-      throw new Error('Invalid passphrase: Passphrase must be at least 8 characters long.');
-    }
+    assertLegacyPassphrase(slot.passphrase);
     if (slot.iterations !== undefined) validateIterations(slot.iterations);
+  } else if (slot.type === 'argon2id') {
+    assertPassphrase(slot.passphrase);
+    resolveArgon2idParams(slot);
   } else {
     assertP256PublicKeyHex(slot.publicKey, 'Invalid device publicKey');
   }
+}
+
+async function wrapAesGcm(kek: CryptoKey, contentKey: Uint8Array): Promise<string> {
+  const iv = globalThis.crypto.getRandomValues(new Uint8Array(IV_LENGTH_BYTES));
+  const ct = new Uint8Array(
+    await globalThis.crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv as BufferSource },
+      kek,
+      contentKey as BufferSource
+    )
+  );
+  const wrapped = new Uint8Array(iv.length + ct.length);
+  wrapped.set(iv, 0);
+  wrapped.set(ct, iv.length);
+  return b64encode(wrapped);
 }
 
 async function wrapContentKey(slot: SlotSpec, contentKey: Uint8Array): Promise<Slot> {
@@ -138,23 +175,26 @@ async function wrapContentKey(slot: SlotSpec, contentKey: Uint8Array): Promise<S
     const iterations = slot.iterations ?? RECOMMENDED_PBKDF2_ITERATIONS;
     const salt = globalThis.crypto.getRandomValues(new Uint8Array(SALT_LENGTH_BYTES));
     const kek = await deriveKey(slot.passphrase, salt as Uint8Array<ArrayBuffer>, iterations);
-    const iv = globalThis.crypto.getRandomValues(new Uint8Array(IV_LENGTH_BYTES));
-    const ct = new Uint8Array(
-      await globalThis.crypto.subtle.encrypt(
-        { name: 'AES-GCM', iv: iv as BufferSource },
-        kek,
-        contentKey as BufferSource
-      )
-    );
-    const wrapped = new Uint8Array(iv.length + ct.length);
-    wrapped.set(iv, 0);
-    wrapped.set(ct, iv.length);
     return {
       type: 'pbkdf2',
       id: slot.id,
       salt: b64encode(salt),
       iterations,
-      wrapped: b64encode(wrapped),
+      wrapped: await wrapAesGcm(kek, contentKey),
+    };
+  }
+  if (slot.type === 'argon2id') {
+    const params = resolveArgon2idParams(slot);
+    const salt = globalThis.crypto.getRandomValues(new Uint8Array(SALT_LENGTH_BYTES));
+    const kek = await deriveArgon2idKey(slot.passphrase, salt, params);
+    return {
+      type: 'argon2id',
+      id: slot.id,
+      salt: b64encode(salt),
+      memoryKiB: params.memoryKiB,
+      iterations: params.iterations,
+      parallelism: params.parallelism,
+      wrapped: await wrapAesGcm(kek, contentKey),
     };
   }
   const wrappedBytes = await eciesEncrypt(slot.publicKey, contentKey);
@@ -166,24 +206,59 @@ async function wrapContentKey(slot: SlotSpec, contentKey: Uint8Array): Promise<S
   };
 }
 
-async function unwrapPbkdf2Slot(slot: Pbkdf2Slot, passphrase: string): Promise<Uint8Array> {
-  const salt = b64decode(slot.salt, 'pbkdf2 slot salt');
-  if (salt.length !== SALT_LENGTH_BYTES) {
-    throw new Error('Malformed envelope header: pbkdf2 salt must decode to 16 bytes.');
-  }
-  const wrapped = b64decode(slot.wrapped, 'pbkdf2 slot wrapped');
+async function unwrapAesGcm(
+  kek: CryptoKey,
+  wrapped: Uint8Array,
+  label: string,
+): Promise<Uint8Array> {
   if (wrapped.length < IV_LENGTH_BYTES + GCM_TAG_LENGTH) {
-    throw new Error('Malformed envelope header: pbkdf2 wrapped bytes are truncated.');
+    throw new Error(`Malformed envelope header: ${label} wrapped bytes are truncated.`);
   }
   const iv = wrapped.slice(0, IV_LENGTH_BYTES);
   const ct = wrapped.slice(IV_LENGTH_BYTES);
-  const kek = await deriveKey(passphrase, salt as Uint8Array<ArrayBuffer>, slot.iterations);
   const pt = await globalThis.crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: iv as BufferSource },
     kek,
     ct as BufferSource
   );
   return new Uint8Array(pt);
+}
+
+async function unwrapPbkdf2Slot(slot: Pbkdf2Slot, passphrase: string): Promise<Uint8Array> {
+  const salt = b64decode(slot.salt, 'pbkdf2 slot salt');
+  if (salt.length !== SALT_LENGTH_BYTES) {
+    throw new Error('Malformed envelope header: pbkdf2 salt must decode to 16 bytes.');
+  }
+  const wrapped = b64decode(slot.wrapped, 'pbkdf2 slot wrapped');
+  const kek = await deriveKey(passphrase, salt as Uint8Array<ArrayBuffer>, slot.iterations);
+  return unwrapAesGcm(kek, wrapped, 'pbkdf2');
+}
+
+async function unwrapArgon2idSlot(slot: Argon2idSlot, passphrase: string): Promise<Uint8Array> {
+  const salt = b64decode(slot.salt, 'argon2id slot salt');
+  if (salt.length !== SALT_LENGTH_BYTES) {
+    throw new Error('Malformed envelope header: argon2id salt must decode to 16 bytes.');
+  }
+  const wrapped = b64decode(slot.wrapped, 'argon2id slot wrapped');
+  const kek = await deriveArgon2idKey(passphrase, salt, {
+    memoryKiB: slot.memoryKiB,
+    iterations: slot.iterations,
+    parallelism: slot.parallelism,
+  });
+  return unwrapAesGcm(kek, wrapped, 'argon2id');
+}
+
+function isPassphraseSlot(slot: Slot): slot is Pbkdf2Slot | Argon2idSlot {
+  return slot.type === 'pbkdf2' || slot.type === 'argon2id';
+}
+
+async function unwrapPassphraseSlot(
+  slot: Pbkdf2Slot | Argon2idSlot,
+  passphrase: string,
+): Promise<Uint8Array> {
+  return slot.type === 'argon2id'
+    ? unwrapArgon2idSlot(slot, passphrase)
+    : unwrapPbkdf2Slot(slot, passphrase);
 }
 
 export function decodeBase64Envelope(encrypted: EncryptedBackup): Uint8Array {
@@ -262,7 +337,7 @@ export function parseEnvelope(decoded: Uint8Array): {
       throw new Error('Malformed envelope header: slot must be an object.');
     }
     const s = raw as Record<string, unknown>;
-    if (s.type !== 'pbkdf2' && s.type !== 'device-p256') {
+    if (s.type !== 'pbkdf2' && s.type !== 'argon2id' && s.type !== 'device-p256') {
       throw new Error(`Unknown slot type '${String(s.type)}'.`);
     }
     if (typeof s.id !== 'string' || s.id.length < 1 || s.id.length > 63 || !SLOT_ID_RE.test(s.id)) {
@@ -272,9 +347,10 @@ export function parseEnvelope(decoded: Uint8Array): {
       throw new Error(`Malformed envelope header: duplicate slot id '${s.id}'.`);
     }
     seen.add(s.id);
-    if (s.type === 'pbkdf2') {
+    if (s.type === 'pbkdf2' || s.type === 'argon2id') {
+      const label = s.type;
       if (typeof s.salt !== 'string' || typeof s.wrapped !== 'string') {
-        throw new Error('Malformed envelope header: pbkdf2 slot missing salt/wrapped.');
+        throw new Error(`Malformed envelope header: ${label} slot missing salt/wrapped.`);
       }
       if (
         typeof s.iterations !== 'number' ||
@@ -282,33 +358,56 @@ export function parseEnvelope(decoded: Uint8Array): {
         s.iterations < 1 ||
         s.iterations > 4294967295
       ) {
-        throw new Error('Malformed envelope header: invalid pbkdf2 iterations.');
+        throw new Error(`Malformed envelope header: invalid ${label} iterations.`);
+      }
+      if (s.type === 'argon2id') {
+        try {
+          resolveArgon2idParams({
+            memoryKiB: s.memoryKiB as number,
+            iterations: s.iterations,
+            parallelism: s.parallelism as number,
+          });
+        } catch {
+          throw new Error('Malformed envelope header: invalid argon2id parameters.');
+        }
       }
       let saltBytes: Uint8Array;
       let wrappedBytes: Uint8Array;
       try {
-        saltBytes = b64decode(s.salt, 'pbkdf2 slot salt');
+        saltBytes = b64decode(s.salt, `${label} slot salt`);
       } catch {
-        throw new Error('Malformed envelope header: pbkdf2 salt is not valid Base64.');
+        throw new Error(`Malformed envelope header: ${label} salt is not valid Base64.`);
       }
       if (saltBytes.length !== SALT_LENGTH_BYTES) {
-        throw new Error('Malformed envelope header: pbkdf2 salt must decode to 16 bytes.');
+        throw new Error(`Malformed envelope header: ${label} salt must decode to 16 bytes.`);
       }
       try {
-        wrappedBytes = b64decode(s.wrapped, 'pbkdf2 slot wrapped');
+        wrappedBytes = b64decode(s.wrapped, `${label} slot wrapped`);
       } catch {
-        throw new Error('Malformed envelope header: pbkdf2 wrapped is not valid Base64.');
+        throw new Error(`Malformed envelope header: ${label} wrapped is not valid Base64.`);
       }
       if (wrappedBytes.length < IV_LENGTH_BYTES + GCM_TAG_LENGTH) {
-        throw new Error('Malformed envelope header: pbkdf2 wrapped bytes are truncated.');
+        throw new Error(`Malformed envelope header: ${label} wrapped bytes are truncated.`);
       }
-      slots.push({
-        type: 'pbkdf2',
-        id: s.id,
-        salt: s.salt,
-        iterations: s.iterations,
-        wrapped: s.wrapped,
-      });
+      if (s.type === 'argon2id') {
+        slots.push({
+          type: 'argon2id',
+          id: s.id,
+          salt: s.salt,
+          memoryKiB: s.memoryKiB as number,
+          iterations: s.iterations,
+          parallelism: s.parallelism as number,
+          wrapped: s.wrapped,
+        });
+      } else {
+        slots.push({
+          type: 'pbkdf2',
+          id: s.id,
+          salt: s.salt,
+          iterations: s.iterations,
+          wrapped: s.wrapped,
+        });
+      }
     } else {
       if (typeof s.publicKey !== 'string' || typeof s.wrapped !== 'string') {
         throw new Error('Malformed envelope header: device-p256 slot missing publicKey/wrapped.');
@@ -400,11 +499,11 @@ async function resolveContentKey(header: EnvelopeHeader, unlock: Unlock): Promis
   if ('slotId' in unlock && 'passphrase' in unlock) {
     const slot = header.slots.find((s) => s.id === unlock.slotId);
     if (!slot) throw new Error(`Slot '${unlock.slotId}' not found.`);
-    if (slot.type !== 'pbkdf2') {
-      throw new Error(`Slot '${unlock.slotId}' is not a pbkdf2 slot.`);
+    if (!isPassphraseSlot(slot)) {
+      throw new Error(`Slot '${unlock.slotId}' is not a passphrase slot.`);
     }
     try {
-      const contentKey = await unwrapPbkdf2Slot(slot, unlock.passphrase);
+      const contentKey = await unwrapPassphraseSlot(slot, unlock.passphrase);
       if (contentKey.length !== CONTENT_KEY_LENGTH_BYTES) {
         throw new Error('Decryption failed: Invalid content key.');
       }
@@ -417,13 +516,13 @@ async function resolveContentKey(header: EnvelopeHeader, unlock: Unlock): Promis
     }
   }
   if ('passphrase' in unlock && !('slotId' in unlock)) {
-    const pbkdf2Slots = header.slots.filter((s): s is Pbkdf2Slot => s.type === 'pbkdf2');
-    if (pbkdf2Slots.length === 0) {
-      throw new Error('Decryption failed: No pbkdf2 slot available.');
+    const passphraseSlots = header.slots.filter(isPassphraseSlot);
+    if (passphraseSlots.length === 0) {
+      throw new Error('Decryption failed: No passphrase slot available.');
     }
-    for (const slot of pbkdf2Slots) {
+    for (const slot of passphraseSlots) {
       try {
-        const contentKey = await unwrapPbkdf2Slot(slot, unlock.passphrase);
+        const contentKey = await unwrapPassphraseSlot(slot, unlock.passphrase);
         if (contentKey.length === CONTENT_KEY_LENGTH_BYTES) return contentKey;
       } catch (error) {
         if (error instanceof DOMException && error.name === 'OperationError') continue;
@@ -522,18 +621,22 @@ export async function openV2WithPassphrase(
   let allowed: number[] | undefined;
   if (typeof attemptIterations === 'number') allowed = [attemptIterations];
   else if (Array.isArray(attemptIterations)) allowed = attemptIterations;
-  const candidates = header.slots.filter((s): s is Pbkdf2Slot => s.type === 'pbkdf2');
+  const passphraseSlots = header.slots.filter(isPassphraseSlot);
   const filtered =
-    allowed === undefined ? candidates : candidates.filter((s) => allowed.includes(s.iterations));
+    allowed === undefined
+      ? passphraseSlots
+      : passphraseSlots.filter(
+          (s) => s.type === 'argon2id' || allowed.includes(s.iterations),
+        );
   if (filtered.length === 0) {
-    if (allowed !== undefined && candidates.length > 0) {
+    if (allowed !== undefined && passphraseSlots.length > 0) {
       throw new Error('Decryption failed: No v2 slot matches the attempted iterations.');
     }
     throw new Error('Decryption failed: Invalid passphrase or corrupted data.');
   }
   for (const slot of filtered) {
     try {
-      const contentKey = await unwrapPbkdf2Slot(slot, passphrase);
+      const contentKey = await unwrapPassphraseSlot(slot, passphrase);
       if (contentKey.length !== CONTENT_KEY_LENGTH_BYTES) continue;
       return await decryptPayload(contentKey, iv, ciphertext);
     } catch (error) {
@@ -564,7 +667,15 @@ export function inspectEnvelope(encrypted: EncryptedBackup): InspectResult {
     slots: header.slots.map((s) =>
       s.type === 'pbkdf2'
         ? { type: s.type, id: s.id, iterations: s.iterations }
-        : { type: s.type, id: s.id, publicKey: s.publicKey }
+        : s.type === 'argon2id'
+          ? {
+              type: s.type,
+              id: s.id,
+              iterations: s.iterations,
+              memoryKiB: s.memoryKiB,
+              parallelism: s.parallelism,
+            }
+          : { type: s.type, id: s.id, publicKey: s.publicKey }
     ),
     ...(header.descriptor !== undefined ? { descriptor: header.descriptor } : {}),
   };

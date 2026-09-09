@@ -5,6 +5,7 @@ import { Utils } from '@bsv/sdk';
 import { decodeBase64Envelope, hasV2Magic, parseEnvelope } from '../src/envelope';
 import {
   addSlot,
+  ARGON2ID_FAST,
   decryptBackup,
   eciesDecrypt,
   encryptBackup,
@@ -61,6 +62,19 @@ describe('envelope v2 seal/open', () => {
     expect(decB.wif).toBe(wifPayload.wif);
     const decAny = (await openBackup(enc, { passphrase: passphraseB })) as WifBackup;
     expect(decAny.wif).toBe(wifPayload.wif);
+  });
+
+  it('round trips with one argon2id slot', async () => {
+    const enc = await sealBackup(wifPayload, [
+      { type: 'argon2id', id: 'main', passphrase: passphraseA, ...ARGON2ID_FAST },
+    ]);
+    expect(inspectEnvelope(enc)).toMatchObject({
+      version: 2,
+      slots: [{ type: 'argon2id', id: 'main', memoryKiB: ARGON2ID_FAST.memoryKiB }],
+    });
+    const dec = (await openBackup(enc, { passphrase: passphraseA })) as WifBackup;
+    expect(dec.wif).toBe(wifPayload.wif);
+    await expect(openBackup(enc, { passphrase: passphraseB })).rejects.toThrow(/Invalid passphrase/);
   });
 
   it('round trips with one device-p256 slot', async () => {

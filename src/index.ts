@@ -1,9 +1,20 @@
 import { decryptData, encryptData, isValidPayload } from './crypto';
 import { decodeBase64Envelope, hasV2Magic, openV2WithPassphrase } from './envelope';
 import type { DecryptedBackup, EncryptedBackup } from './interfaces';
+import { assertLegacyPassphrase } from './passphrase';
 
 export {
+  ARGON2ID_DEFAULTS,
+  ARGON2ID_FAST,
+  type Argon2idParams,
+  deriveArgon2idKey,
+  deriveArgon2idRaw,
+  resolveArgon2idParams,
+  validateArgon2idParams,
+} from './argon2';
+export {
   addSlot,
+  type Argon2idSlot,
   type DeviceP256Slot,
   type EnvelopeHeader,
   type InspectResult,
@@ -19,6 +30,13 @@ export {
   type Unlock,
   updateBackupPayload,
 } from './envelope';
+export {
+  assertLegacyPassphrase,
+  assertPassphrase,
+  LONG_PASSPHRASE_LENGTH,
+  MAX_PASSPHRASE_LENGTH,
+  MIN_PASSPHRASE_LENGTH,
+} from './passphrase';
 
 /**
  * Validates the structure of a payload intended for encryption.
@@ -45,12 +63,7 @@ export async function encryptBackup(
       'Invalid payload: Payload must be an object matching SigmaSeedBackup, BapMasterBackup, BapAccountBackup, WifBackup, OneSatBackup, VaultBackup, YoursWalletBackup, or YoursWalletZipBackup structure.'
     );
   }
-  if (typeof passphrase !== 'string' || passphrase.length === 0) {
-    throw new Error('Invalid passphrase: Passphrase must be a non-empty string.');
-  }
-  if (passphrase.length < 8) {
-    throw new Error('Invalid passphrase: Passphrase must be at least 8 characters long.');
-  }
+  assertLegacyPassphrase(passphrase);
   return encryptData(payload, passphrase, iterations);
 }
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+
+### Added
+- v2 `argon2id` passphrase slots (RFC 9106 interactive parameters: 64 MiB, t=3, p=1). New Vault files should use these instead of PBKDF2.
+- `assertPassphrase` wallet-grade policy (12+ characters; 16+ or mixed character classes; common-password denylist). Do not trim passphrases.
+- `deriveArgon2idRaw` / `deriveArgon2idKey` for consumers that wrap keys themselves.
+
+### Changed
+- `openBackup` / `decryptBackup` try argon2id and pbkdf2 passphrase slots. Existing pbkdf2 envelopes still open.
+
 ## 0.1.0
 
 ### Added
